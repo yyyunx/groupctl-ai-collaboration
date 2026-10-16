@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "groupctl"
+version = "0.1.0"
+description = "Vendor-neutral Git group collaboration helper, protocol 0.1"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+groupctl = "groupctl.__main__:main"
+
+[tool.setuptools]
+packages = ["groupctl"]

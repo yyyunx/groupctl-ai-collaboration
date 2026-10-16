@@ -1,0 +1,14 @@
+{
+  "verification_date": "2026-10-16",
+  "integration_tests": 15,
+  "integration_result": "pass",
+  "targeted_schema_recheck": "pass",
+  "demo_commands": 43,
+  "demo_project_tests": 4,
+  "normal_merge": "pass",
+  "real_git_conflict_and_resolution": "pass",
+  "original_specifications_unchanged": true,
+  "remote_type": "local bare Git repository",
+  "github_hosted_run": "not performed; requires group repository and authentication",
+  "semantic_and_confirmation_scope": "simulated known demonstration fixture; real use requires human/agent judgment"
+}

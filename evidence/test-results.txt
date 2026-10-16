@@ -1,0 +1,20 @@
+test_blocker_requires_explicit_resolution_event (test_groupctl.CollaborationTests.test_blocker_requires_explicit_resolution_event) ... ok
+test_candidate_is_invalidated_by_changed_source (test_groupctl.CollaborationTests.test_candidate_is_invalidated_by_changed_source) ... ok
+test_cli_failed_test_returns_nonzero_with_published_evidence (test_groupctl.CollaborationTests.test_cli_failed_test_returns_nonzero_with_published_evidence) ... ok
+test_conflict_is_visible_then_resolution_is_verified (test_groupctl.CollaborationTests.test_conflict_is_visible_then_resolution_is_verified) ... ok
+test_failed_test_publishes_evidence_and_cannot_finalize (test_groupctl.CollaborationTests.test_failed_test_publishes_evidence_and_cannot_finalize) ... ok
+test_modified_public_event_is_detected_from_history (test_groupctl.CollaborationTests.test_modified_public_event_is_detected_from_history) ... ok
+test_pending_change_blocks_final_until_explicit_disposition (test_groupctl.CollaborationTests.test_pending_change_blocks_final_until_explicit_disposition) ... ok
+test_remote_push_failure_is_not_reported_as_publication (test_groupctl.CollaborationTests.test_remote_push_failure_is_not_reported_as_publication) ... ok
+test_review_concerns_block_finalization (test_groupctl.CollaborationTests.test_review_concerns_block_finalization) ... ok
+test_schema_secret_and_event_mutation_protection (test_groupctl.CollaborationTests.test_schema_secret_and_event_mutation_protection) ... ok
+test_semantic_failure_overrides_successful_git_and_tests (test_groupctl.CollaborationTests.test_semantic_failure_overrides_successful_git_and_tests) ... ok
+test_sync_protects_dirty_work_and_status_does_not_merge (test_groupctl.CollaborationTests.test_sync_protects_dirty_work_and_status_does_not_merge) ... ok
+test_test_named_change_uses_isolated_checkout (test_groupctl.CollaborationTests.test_test_named_change_uses_isolated_checkout) ... ok
+test_three_people_publish_discover_integrate_test_and_finalize (test_groupctl.CollaborationTests.test_three_people_publish_discover_integrate_test_and_finalize) ... ok
+test_unavailable_checks_are_not_a_success (test_groupctl.CollaborationTests.test_unavailable_checks_are_not_a_success) ... ok
+
+----------------------------------------------------------------------
+Ran 15 tests in 179.407s
+
+OK

@@ -1,0 +1,7 @@
+{
+  "reviewed_commit": "REPLACE_WITH_CURRENT_EXACT_HEAD_AFTER_ACTUAL_REVIEW",
+  "semantic_review": "fail",
+  "build": "not_applicable",
+  "summary": "Replace with actual reasoning about compatibility before choosing pass.",
+  "conflict_resolution_summary": "Explain how both intended behaviors were preserved."
+}

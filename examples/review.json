@@ -1,0 +1,9 @@
+{
+  "inspected_commit": "REPLACE_WITH_ACTUALLY_INSPECTED_FULL_COMMIT",
+  "diff_inspected": true,
+  "verdict": "needs_more_evidence",
+  "summary": "Replace with actual review findings.",
+  "issues": ["Replace with concrete issues, or an empty list."],
+  "tests_run": [],
+  "evidence": []
+}

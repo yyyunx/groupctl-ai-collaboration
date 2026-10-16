@@ -1,0 +1,6 @@
+test_schema_secret_and_event_mutation_protection (test_groupctl.CollaborationTests.test_schema_secret_and_event_mutation_protection) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 8.167s
+
+OK

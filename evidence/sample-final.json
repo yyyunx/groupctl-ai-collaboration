@@ -1,0 +1,11 @@
+{
+  "protocol_version": "0.1",
+  "group_id": "G-DEMO",
+  "canonical_branch": "main",
+  "canonical_commit": "0f24e65f3aeb391dbf89b7d8db8df6186720793b",
+  "report_file": ".group/final/final_report.md",
+  "initiated_by": "P22",
+  "created_at": "2026-10-16T07:02:52.079329Z",
+  "status": "completed",
+  "known_limitations": []
+}
