@@ -250,9 +250,11 @@ def trace(args):
             related, relation = True, "group_wide_blocker"
         if related:
             row = summary(event) | {"relation": relation, "resolved_by_record": event["event_id"] in resolved}
-            for key in ("passed", "failed", "skipped"):
+            for key in ("passed", "failed", "skipped", "merge_commit", "inspected_commit", "target_branch"):
                 if key in event:
                     row[key] = event[key]
+            if event["event_type"] == "integration_result":
+                row["verification"] = {key: event["verification"][key] for key in ("build", "tests", "semantic_review")}
             timeline.append(row)
     reviews = [e for e in timeline if e["event_type"] == "review"]
     latest_review = reviews[-1] if reviews else None
@@ -278,5 +280,10 @@ def render_trace(value):
         outcome = row.get("verdict", row.get("automated_result", row.get("result", "")))
         lines.append(f"- {row['created_at']} | {row['person_id']} | {row['event_type']} | {outcome} | {detail}")
         lines.append(f"  {row['event_id']}；依據：{row['relation']}")
+        commit = row.get("merge_commit", row.get("inspected_commit", row.get("commit")))
+        if commit:
+            lines.append(f"  Commit：{commit}")
+        if row.get("verification"):
+            lines.append("  驗證：" + json_text(row["verification"]).replace("\n", " "))
     lines += ["Canonical：" + json_text(value["canonical_incorporation"]).replace("\n", " "), value["note"]]
     return "\n".join(lines)

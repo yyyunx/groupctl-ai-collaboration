@@ -45,7 +45,7 @@ class TraceOfflineTests(GitFixture):
                 "verdict": verdict, "summary": "Explicit fixture review", "issues": [], "tests_run": [],
                 "evidence": ["Exact diff inspected"]})
             call(self.b, "review", change=change["change_id"], file=str(assessment))
-        self.integrate(self.b, change["change_id"])
+        integrated = self.integrate(self.b, change["change_id"])
         tested = call(self.b, "test", scope="current", human_check=[])
         git(self.b, "switch", "main")
         git(self.b, "merge", "--no-edit", "people/P22/work")
@@ -53,6 +53,9 @@ class TraceOfflineTests(GitFixture):
         args = argparse.Namespace(repo=str(self.b), change=change["change_id"], offline=False)
         result = collaboration.trace(args)
         self.assertEqual(result["status"], "in_canonical_history")
+        integration = next(e for e in result["timeline"] if e["event_type"] == "integration_result")
+        self.assertEqual(integration["merge_commit"], integrated["event"]["merge_commit"])
+        self.assertEqual(integration["verification"]["semantic_review"], "pass")
         self.assertEqual([e["verdict"] for e in result["timeline"] if e["event_type"] == "review"], ["reject", "accept"])
         evidence = next(e for e in result["timeline"] if e["event_id"] == tested["event"]["event_id"])
         self.assertEqual(evidence["passed"], 1)
