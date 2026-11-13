@@ -51,7 +51,7 @@ class GitFixture(unittest.TestCase):
             'import unittest\nfrom greet import greet\nclass GreetingTest(unittest.TestCase):\n'
             '    def test_name(self):\n        self.assertIn("Ada", greet("Ada"))\n', encoding="utf-8")
         call(self.a, "init", group="G-demo", person="P17", name="A", assignment=str(self.assignment),
-             checks_file=str(self.checks), canonical="main")
+             checks_file=str(self.checks), canonical="main", simulation=True)
         git(self.a, "add", ".")
         git(self.a, "commit", "-m", "Initial group project")
         git(self.a, "push", "-u", "origin", "main")

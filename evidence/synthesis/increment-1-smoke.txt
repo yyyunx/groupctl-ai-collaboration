@@ -1,0 +1,6 @@
+test_three_people_publish_discover_integrate_test_and_finalize (test_groupctl.CollaborationTests.test_three_people_publish_discover_integrate_test_and_finalize) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 27.313s
+
+OK

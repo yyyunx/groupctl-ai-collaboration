@@ -1,0 +1,19 @@
+test_final_missing_argument (test_cli.TestGroupCtlCLI.test_final_missing_argument)
+FINAL 候選指令缺少成員 ID ... ok
+test_group (test_cli.TestGroupCtlCLI.test_group)
+測試查詢小組資訊 ... ok
+test_help (test_cli.TestGroupCtlCLI.test_help)
+沒有輸入指令時，應顯示可用指令 ... ok
+test_members (test_cli.TestGroupCtlCLI.test_members)
+測試查詢小組成員 ... ok
+test_review_missing_argument (test_cli.TestGroupCtlCLI.test_review_missing_argument)
+REV 未提供 Change ID 應被拒絕 ... ok
+test_test_missing_argument (test_cli.TestGroupCtlCLI.test_test_missing_argument)
+TEST 未提供成員 ID 應被拒絕 ... ok
+test_unknown_command (test_cli.TestGroupCtlCLI.test_unknown_command)
+未知指令應顯示錯誤提示 ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 1.817s
+
+OK

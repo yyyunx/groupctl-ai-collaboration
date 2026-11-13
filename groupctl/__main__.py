@@ -5,10 +5,20 @@ import sys
 
 from . import commands
 from .core import GroupError
+from .status import render_status
+from . import __version__
 
 
 def parser():
-    p = argparse.ArgumentParser(description="groupctl — Git collaboration protocol 0.1")
+    p = argparse.ArgumentParser(description="groupctl — Git collaboration protocol 0.1",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="Human shorthand: SYNC / PUB / INT / REV / TEST / STATUS / FINAL\n"
+               "Examples:\n  python -m groupctl --repo ../team status --format text\n"
+               "  python -m groupctl --repo ../team inspect C-P17-...\n"
+               "  python -m groupctl --repo ../team test main\n"
+               "FINAL: final-prepare -> show report to human -> final-publish --confirm\n"
+               "Exit codes: 0 success, 1 operation/precondition error, 2 invalid usage or incomplete/failed verification.")
+    p.add_argument("--version", action="version", version=__version__)
     p.add_argument("--repo", default=".", help="Git working directory")
     subs = p.add_subparsers(dest="command", required=True)
 
@@ -22,12 +32,14 @@ def parser():
         sub.add_argument("--" + name, required=True)
     sub.add_argument("--canonical", default="main")
     sub.add_argument("--checks-file", help="JSON list of argument arrays (executed without a shell)")
+    sub.add_argument("--simulation", action="store_true", help="Mark an isolated teaching fixture; final records explicitly remain simulation evidence")
     sub = command("join", commands.join, "Register a member on a new personal branch and publish")
     for name in ("person", "name", "topic"):
         sub.add_argument("--" + name, required=True)
     sub = command("identity", commands.identity, "Select an already recognized member locally")
     sub.add_argument("--person", required=True)
-    command("status", commands.status, "STATUS: report local and freshly fetched group state")
+    sub = command("status", commands.status, "STATUS: report local and freshly fetched group state")
+    sub.add_argument("--format", choices=("json", "text"), default="json", help="JSON for agents (default), readable Chinese text for students")
     sub = command("sync", commands.sync, "SYNC: discover events on all remote branches")
     sub.add_argument("--update", action="store_true", help="Also merge canonical branch and run quick checks")
     command("events", commands.events_command, "List public events from all remote branches")
@@ -63,6 +75,7 @@ def parser():
     sub = command("final-publish", commands.final_publish, "FINAL phase 2: publish human-confirmed final records")
     sub.add_argument("candidate")
     sub.add_argument("--confirm", action="store_true")
+    sub.add_argument("--confirmation-file", help="Candidate-bound human attestation JSON; required for real noninteractive finalization")
     return p
 
 
@@ -70,20 +83,31 @@ def main():
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
         sys.stderr.reconfigure(encoding="utf-8")
-    args = parser().parse_args()
+    cli = parser()
+    if not sys.argv[1:]:
+        cli.print_help()
+        return 0
+    args = cli.parse_args()
     try:
         result = args.function(args)
-        print(json.dumps(result, ensure_ascii=False, indent=2))
+        if getattr(args, "format", "json") == "text":
+            print(render_status(result))
+        else:
+            print(json.dumps(result, ensure_ascii=False, indent=2))
         event = result.get("event", {})
-        if result.get("conflicts"):
+        if result.get("conflicts") or result.get("needs_human"):
             return 2
         if event.get("automated_result") in {"fail", "partial", "not_available"} or event.get("result") in {"failed", "needs_human"}:
             return 2
         if result.get("validation", {}).get("automated_result") in {"fail", "partial", "not_available"}:
             return 2
         return 0
-    except (GroupError, OSError, ValueError, KeyError, TypeError) as exc:
-        print(json.dumps({"error": str(exc)}, ensure_ascii=False), file=sys.stderr)
+    except GroupError as exc:
+        print(json.dumps({"error": str(exc), "exit_code": exc.code, "hint": exc.hint}, ensure_ascii=False), file=sys.stderr)
+        return exc.code
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        print(json.dumps({"error": str(exc), "exit_code": 1,
+                          "hint": "Check input JSON, paths and repository configuration; no success is claimed."}, ensure_ascii=False), file=sys.stderr)
         return 1
 
 

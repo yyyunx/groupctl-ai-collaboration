@@ -2,6 +2,9 @@
 from __future__ import annotations
 
 import json
+import os
+import tempfile
+from contextlib import contextmanager
 import re
 import subprocess
 import uuid
@@ -9,8 +12,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
-class GroupError(Exception):
-    pass
+from .errors import GroupError
+from .events import EVENT_FIELDS, identifier, validate_event, validate_event_graph, event_time
+from .validation import run_checks, parse_counts
 
 
 def now():
@@ -30,16 +34,11 @@ def write_json(path, value):
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def identifier(value):
-    if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,255}", value):
-        raise GroupError(f"Invalid identifier: {value!r}")
-    return value
-
-
-def execute(args, cwd, ok=(0,), timeout=180):
+def execute(args, cwd, ok=(0,), timeout=180, env=None, binary=False):
     try:
-        result = subprocess.run(args, cwd=cwd, capture_output=True, text=True,
-                                encoding="utf-8", errors="replace", timeout=timeout)
+        result = subprocess.run(args, cwd=cwd, capture_output=True, text=not binary,
+                                encoding=None if binary else "utf-8", errors=None if binary else "replace",
+                                timeout=timeout, env=None if env is None else dict(os.environ, **env))
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise GroupError(f"Cannot run {args[0]}: {exc}") from exc
     if result.returncode not in ok:
@@ -48,75 +47,18 @@ def execute(args, cwd, ok=(0,), timeout=180):
     return result
 
 
-EVENT_FIELDS = {
-    "change_published": {"change_id": str, "branch": str, "commit": str, "summary": str,
-                         "files_changed": list, "interface_changes": list, "tests_run": list,
-                         "known_issues": list, "proposed_for_integration": bool},
-    "finding": {"summary": str, "evidence": list},
-    "question": {"question_id": str, "text": str, "blocking": bool},
-    "answer": {"question_id": str, "text": str},
-    "review": {"change_id": str, "verdict": str, "summary": str, "issues": list, "tests_run": list},
-    "test_result": {"scope": str, "commit": str, "commands": list, "automated_result": str,
-                    "passed": (int, type(None)), "failed": (int, type(None)),
-                    "skipped": (int, type(None)), "human_checks_required": list, "summary": str},
-    "integration_result": {"change_id": str, "target_branch": str, "result": str,
-                           "merge_commit": str, "conflicts": list,
-                           "conflict_resolution_summary": str, "verification": dict, "summary": str},
-    "blocker": {"summary": str, "blocking_change_id": str, "requested_action": str},
-    "final_candidate": {"canonical_commit": str, "candidate_report_path": str,
-                        "test_evidence": list, "known_issues": list},
-    "final_result": {"canonical_commit": str, "final_report_path": str,
-                     "test_evidence": list, "known_limitations": list, "initiated_by": str},
-}
-
-
-def validate_event(event):
-    if not isinstance(event, dict):
-        raise GroupError("An event must be a JSON object")
-    common = {"protocol_version": str, "event_id": str, "event_type": str,
-              "group_id": str, "person_id": str, "created_at": str, "related_events": list}
-    if event.get("event_type") not in EVENT_FIELDS:
-        raise GroupError("Unsupported event_type")
-    for key, kind in (common | EVENT_FIELDS[event["event_type"]]).items():
-        if key not in event or not isinstance(event[key], kind):
-            raise GroupError(f"Missing or invalid event field: {key}")
-    if event["protocol_version"] != "0.1":
-        raise GroupError("Unsupported protocol_version")
-    for key in ("event_id", "person_id", "group_id"):
-        identifier(event[key])
-    try:
-        if datetime.fromisoformat(event["created_at"].replace("Z", "+00:00")).tzinfo is None:
-            raise ValueError("timezone required")
-    except ValueError as exc:
-        raise GroupError("created_at must be an ISO timestamp with timezone") from exc
-    for key in ("related_events", "files_changed", "interface_changes", "tests_run", "known_issues",
-                "evidence", "issues", "commands", "human_checks_required", "conflicts",
-                "test_evidence", "known_limitations", "resolves_events"):
-        if key in event and (not isinstance(event[key], list) or not all(isinstance(x, str) for x in event[key])):
-            raise GroupError(f"{key} must contain strings")
-    enums = {"verdict": {"accept", "accept_with_changes", "reject", "needs_more_evidence"},
-             "automated_result": {"pass", "fail", "partial", "not_available"},
-             "result": {"success", "failed", "needs_human"}}
-    for key, values in enums.items():
-        if key in event and event[key] not in values:
-            raise GroupError(f"Invalid {key}: {event[key]}")
-    if event["event_type"] == "integration_result":
-        verification = event["verification"]
-        if not all(verification.get(key) in {"pass", "fail", "not_available", "not_applicable"}
-                   for key in ("build", "tests", "semantic_review")):
-            raise GroupError("verification must describe build, tests and semantic_review")
-    return event
-
-
 class Repository:
     def __init__(self, cwd=".", configured=True):
         self.root = Path(execute(["git", "rev-parse", "--show-toplevel"], cwd).stdout.strip()).resolve()
         self.meta = self.root / ".group"
         self.local = self.meta / "local"
+        self.path(".group/local")
         self.config = read_json(self.meta / "group.json") if configured else {}
         if configured:
             if not isinstance(self.config, dict):
                 raise GroupError("group.json must be a JSON object")
+            if type(self.config.get("simulation", False)) is not bool:
+                raise GroupError("simulation must be a boolean; only explicit true marks fixtures")
             for key in ("protocol_version", "group_id", "canonical_branch", "assignment_file"):
                 if not isinstance(self.config.get(key), str) or not self.config[key]:
                     raise GroupError(f"Missing group configuration: {key}")
@@ -133,8 +75,8 @@ class Repository:
             raise GroupError("Path must stay inside the repository")
         return path
 
-    def git(self, *args, ok=(0,)):
-        return execute(["git", *args], self.root, ok=ok)
+    def git(self, *args, ok=(0,), env=None, binary=False):
+        return execute(["git", *args], self.root, ok=ok, env=env, binary=binary)
 
     def output(self, *args):
         return self.git(*args).stdout.strip()
@@ -166,9 +108,11 @@ class Repository:
 
     def identity(self):
         value = read_json(self.local / "identity.json")
+        if not isinstance(value, dict):
+            raise GroupError("Local identity must be a JSON object")
         person = identifier(value.get("person_id"))
         member = read_json(self.meta / "members" / f"{person}.json")
-        if member.get("person_id") != person or member.get("protocol_version") != "0.1":
+        if not isinstance(member, dict) or member.get("person_id") != person or member.get("protocol_version") != "0.1":
             raise GroupError("Identity must match a recognized membership descriptor")
         return person
 
@@ -186,7 +130,7 @@ class Repository:
     def events(self):
         """Read public events from ALL remote branches without merging those branches."""
         refs = self.output("for-each-ref", "--format=%(refname)", f"refs/remotes/{self.remote}/").splitlines()
-        events, contents = {}, {}
+        events, contents, blobs = {}, {}, {}
         if refs:
             # Inspect historical filenames too: a force-updated event on a single
             # remote tip must not bypass immutability checks.
@@ -202,7 +146,7 @@ class Repository:
                 blob = entry.split()[2]
                 if blob not in contents:
                     try:
-                        contents[blob] = validate_event(json.loads(self.output("cat-file", "blob", blob)))
+                        contents[blob] = validate_event(json.loads(self.git("cat-file", "blob", blob, binary=True).stdout))
                     except ValueError as exc:
                         raise GroupError(f"Malformed event: {path}") from exc
                 event = contents[blob]
@@ -211,10 +155,14 @@ class Repository:
                 if Path(path).stem != event["event_id"]:
                     raise GroupError(f"Event filename does not match event_id: {path}")
                 previous = events.get(event["event_id"])
-                if previous is not None and previous != event:
+                if previous is not None and (previous != event or blobs[event["event_id"]] != blob):
                     raise GroupError(f"Immutable event was changed: {event['event_id']}")
                 events[event["event_id"]] = event
-        return sorted(events.values(), key=lambda x: (x["created_at"], x["event_id"]))
+                blobs[event["event_id"]] = blob
+        self._event_blobs = blobs
+        result = sorted(events.values(), key=lambda x: (event_time(x), x["event_id"]))
+        validate_event_graph(result)
+        return result
 
     def event(self, kind, fields, related=()):
         if kind not in EVENT_FIELDS:
@@ -230,11 +178,48 @@ class Repository:
 
     def publish(self, event, extra=()):
         validate_event(event)
+        if event["group_id"] != self.config["group_id"] or event["person_id"] != self.identity():
+            raise GroupError("Publication envelope must match current group and identity")
+        self.fetch()
+        public = self.events()
         path = self.meta / "events" / f"{event['event_id']}.json"
         if path.exists():
             raise GroupError("Refusing to overwrite an immutable event")
-        write_json(path, event)
-        paths = [str(path.relative_to(self.root)), *extra]
+        # Retain immutable public evidence on the publishing branch, so deleting
+        # feature branches later cannot make accepted collaboration history vanish.
+        local = {}
+        for existing in (self.meta / "events").glob("*.json"):
+            value = validate_event(read_json(existing))
+            if existing.stem != value["event_id"] or value["group_id"] != self.config["group_id"]:
+                raise GroupError(f"Invalid local event filename/group: {existing.name}")
+            local[value["event_id"]] = value
+        combined = {e["event_id"]: e for e in public}
+        for event_id, value in local.items():
+            if event_id in combined and combined[event_id] != value:
+                raise GroupError(f"Immutable event was changed locally: {event_id}")
+            combined[event_id] = value
+        if event["event_id"] in combined:
+            raise GroupError("Refusing to overwrite an immutable event")
+        validate_event_graph([*combined.values(), event])
+        paths = []
+        for published in public:
+            name = published["event_id"]
+            raw = self.git("cat-file", "blob", self._event_blobs[name], binary=True).stdout
+            archive = self.meta / "events" / f"{name}.json"
+            if archive.exists():
+                relative = archive.relative_to(self.root).as_posix()
+                if self.output("hash-object", f"--path={relative}", str(archive)) != self._event_blobs[name]:
+                    raise GroupError(f"Immutable event bytes were changed locally: {name}")
+            else:
+                archive.parent.mkdir(parents=True, exist_ok=True)
+                with archive.open("xb") as stream:
+                    stream.write(raw)
+                paths.append(str(archive.relative_to(self.root)))
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("x", encoding="utf-8", newline="\n") as stream:
+            json.dump(event, stream, ensure_ascii=False, indent=2)
+            stream.write("\n")
+        paths += [str(path.relative_to(self.root)), *extra]
         self.git("add", "--", *paths)
         self.git("commit", "-m", f"group: {event['event_type']} {event['event_id']}", "--", *paths)
         try:
@@ -263,36 +248,44 @@ class Repository:
 
     def checks(self, checks=None):
         commands = self.config.get("validation_commands", []) if checks is None else checks
-        if not isinstance(commands, list) or not all(isinstance(c, list) and c and
-                all(isinstance(x, str) and x for x in c) for c in commands):
-            raise GroupError("validation_commands must be a list of nonempty argument arrays")
-        results = []
-        for command in commands:
+        return run_checks(self.root, commands, self.config.get("validation_timeout", 300))
+
+    @contextmanager
+    def isolated(self, commit):
+        """Disposable checkout for every TEST scope, including current HEAD."""
+        with tempfile.TemporaryDirectory(prefix="groupctl-test-") as directory:
+            target = Path(directory).resolve() / "checkout"
+            self.git("worktree", "add", "--detach", str(target), commit)
             try:
-                result = execute(command, self.root, ok=tuple(range(256)), timeout=300)
-                results.append({"argv": command, "exit_code": result.returncode,
-                                "stdout": result.stdout[-16000:], "stderr": result.stderr[-16000:]})
-            except GroupError as exc:
-                results.append({"argv": command, "exit_code": None, "error": str(exc)})
-        state = ("not_available" if not results else
-                 "fail" if any(r["exit_code"] not in (0, None) for r in results) else
-                 "partial" if any(r["exit_code"] is None for r in results) else "pass")
-        return {"automated_result": state, "results": results}
+                yield Repository(target)
+            finally:
+                if target.parent != Path(directory).resolve():
+                    raise GroupError("Unsafe temporary worktree path")
+                self.git("worktree", "remove", "--force", str(target))
+
+    def check_commit(self, commit):
+        with self.isolated(commit) as checkout:
+            checks = checkout.checks()
+            if checkout.output("status", "--porcelain"):
+                checks["automated_result"] = "fail"
+                checks["repository_modified"] = True
+                checks["summary"] = "Validation modified tracked/unignored files in the isolated checkout"
+            return checks
+
+    def snapshot(self, paths):
+        """Snapshot selected working files using a private index; preserve user's index."""
+        with tempfile.TemporaryDirectory(prefix="groupctl-index-") as directory:
+            environment = {"GIT_INDEX_FILE": str(Path(directory) / "index")}
+            self.git("read-tree", "HEAD", env=environment)
+            self.git("--literal-pathspecs", "add", "--all", "--", *paths, env=environment)
+            tree = self.git("write-tree", env=environment).stdout.strip()
+            return self.output("commit-tree", tree, "-p", self.head, "-m", "groupctl isolated validation snapshot")
 
     def test_event(self, scope, commit, checks, human=()):
-        # Counts are unknown for arbitrary test runners; never invent test totals.
+        # Keep unknown counts null instead of inventing totals for custom runners.
+        counts = [result.get("counts") for result in checks["results"]]
         passed = failed = skipped = None
-        counts = []
-        for result in checks["results"]:
-            output = result.get("stdout", "") + result.get("stderr", "")
-            match = re.search(r"Ran (\d+) tests? in", output)
-            if match:
-                errors = re.search(r"FAILED \(([^)]+)\)", output)
-                bad = sum(int(x) for x in re.findall(r"(?:failures|errors)=(\d+)", errors[1] if errors else ""))
-                skip_match = re.search(r"skipped=(\d+)", output)
-                skip = int(skip_match[1]) if skip_match else 0
-                counts.append((int(match[1]) - bad - skip, bad, skip))
-        if counts and len(counts) == len(checks["results"]):
+        if counts and all(value is not None for value in counts):
             passed, failed, skipped = map(sum, zip(*counts))
         return self.event("test_result", {"scope": scope, "commit": commit,
             "commands": [json.dumps(r["argv"], ensure_ascii=False) for r in checks["results"]],
