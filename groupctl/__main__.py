@@ -1,4 +1,4 @@
-"""Run with python -m groupctl. All successful output is JSON."""
+"""Run with python -m groupctl. Core commands use JSON; handoff views offer text."""
 import argparse
 import json
 import sys
@@ -43,6 +43,7 @@ def parser():
     sub.add_argument("--person", required=True)
     sub = command("status", commands.status, "STATUS: report local and freshly fetched group state")
     sub.add_argument("--format", choices=("json", "text"), default="json", help="JSON for agents (default), readable Chinese text for students")
+    sub.add_argument("--offline", action="store_true", help="Use only known local refs/events; data may be stale")
     sub = command("sync", commands.sync, "SYNC: discover events on all remote branches")
     sub.add_argument("--update", action="store_true", help="Also merge canonical branch and run quick checks")
     command("events", commands.events_command, "List public events from all remote branches")
@@ -120,6 +121,10 @@ def parser():
     action = sub.add_mutually_exclusive_group()
     action.add_argument("--retry-push", action="store_true", help="Fresh fetch + normal fast-forward push of existing HEAD; no new events")
     action.add_argument("--resume-integration", metavar="CHANGE_ID", help="Restore missing local integration metadata from an exact Git merge")
+    sub = command("trace", collaboration.trace, "Read a change lifecycle from events and exact Git ancestry")
+    sub.add_argument("change")
+    sub.add_argument("--format", choices=("text", "json"), default="text")
+    sub.add_argument("--offline", action="store_true")
     return p
 
 
@@ -142,6 +147,8 @@ def main():
             print(collaboration.render_inbox(result))
         elif args.command == "recover" and args.format == "text":
             print(recovery.render_recovery(result))
+        elif args.command == "trace" and args.format == "text":
+            print(collaboration.render_trace(result))
         elif getattr(args, "format", "json") == "text":
             print(render_status(result))
         else:

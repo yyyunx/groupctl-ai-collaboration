@@ -18,6 +18,22 @@ needed for the user's requested setup. Give different people different IDs and
 
 ## Workflow routing
 
+Start a fresh session with `context --format markdown` (or JSON) and `inbox`.
+The pack is length-limited: inspect its totals/truncated flag and request the
+relevant full change or events before judging. Use `trace <change_id>` for its
+actual lifecycle. `--offline` uses cached refs; report possible staleness.
+Use `pub --dry-run` or `integrate <change_id> --preview` before a risky action:
+they run no tests and predict file overlap only, not a confirmed Git conflict.
+For interruptions, diagnose with `recover`; retry existing commits explicitly
+with `recover --retry-push` rather than creating duplicate events. Never force
+push or reset to make recovery appear successful.
+
+Use `ask --text`, `answer <question_id> --text`, `block --summary --action`,
+and `resolve <event_id> --reason` for honest communication from a clean tree.
+Resolution is a new record, not a rewritten verdict. `template review <change_id>`
+and `template semantic` generate unapproved JSON; inspect and assess before
+publishing. Marking inbox events read is local bookkeeping, never approval.
+
 - SYNC: discover public events, inspect relevant changes, then safely update
   canonical state. Preserve dirty work; do not merge all feature branches.
 - PUB: inspect the real diff and secrets, record interface changes and known

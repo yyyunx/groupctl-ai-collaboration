@@ -4,6 +4,7 @@ from . import localstate
 from .policy import unresolved_blockers
 from .presentation import safe, summary, json_text, redact
 from .status import state, render_status
+import re
 
 
 class ObservedRepository(Repository):
@@ -195,4 +196,87 @@ def render_inbox(value):
         if not value[key]:
             lines.append("- 無")
     lines += ["\n下一步：" + value["recommended_next_action_text"], value["note"]]
+    return "\n".join(lines)
+
+
+def conflict_warnings(r, events, view):
+    from .preview import working_files, changed
+    base = r.output("merge-base", "HEAD", r.canonical)
+    local = working_files(r) | changed(r, base, "HEAD")
+    ignore_case = r.git("config", "--bool", "--get", "core.ignorecase", ok=(0, 1)).stdout.strip() == "true"
+    def normalized(path):
+        path = path.replace("\\", "/")
+        return path.casefold() if ignore_case else path
+    ours = {normalized(p) for p in local if not p.startswith(".group/")}
+    pending = {change["change_id"] for change in view["pending_changes"] if not change["in_current"]}
+    warnings = []
+    for event in events:
+        if event["event_type"] != "change_published" or event["change_id"] not in pending:
+            continue
+        overlap = [p for p in event["files_changed"] if normalized(p) in ours]
+        if overlap or event["interface_changes"]:
+            warnings.append({"change_id": event["change_id"], "person_id": event["person_id"],
+                "overlapping_files": overlap, "interface_changes": event["interface_changes"],
+                "risk_only": True, "basis": "published declarations and local file changes; not a confirmed Git conflict"})
+    return safe(warnings)
+
+
+def trace(args):
+    r, events, freshness = observed(args)
+    change = r.change(args.change, events)
+    associations = event_changes(events)
+    resolved = resolved_ids(events)
+    timeline, unavailable = [], []
+    related_ids = {e["event_id"] for e in events if args.change in associations[e["event_id"]] or
+                   (e["event_type"] == "blocker" and e["blocking_change_id"] == "GROUP")}
+    while True:
+        expanded = related_ids | {e["event_id"] for e in events if set(e["related_events"]) & related_ids}
+        if expanded == related_ids:
+            break
+        related_ids = expanded
+    for event in events:
+        related = event["event_id"] in related_ids
+        relation = "event_reference"
+        if event["event_type"] == "test_result":
+            commit = event["commit"]
+            exists = isinstance(commit, str) and re.fullmatch(r"[0-9a-f]{40}|[0-9a-f]{64}", commit) and \
+                r.git("cat-file", "-e", f"{commit}^{{commit}}", ok=(0, 1, 128)).returncode == 0
+            if exists and r.ancestor(change["commit"], commit):
+                related, relation = True, "tested_commit_contains_change_history"
+            elif event.get("scope") == args.change:
+                related, relation = True, "declared_scope_commit_not_verified"
+                unavailable.append(event["event_id"])
+        if event["event_type"] == "blocker" and event["blocking_change_id"] == "GROUP":
+            related, relation = True, "group_wide_blocker"
+        if related:
+            row = summary(event) | {"relation": relation, "resolved_by_record": event["event_id"] in resolved}
+            for key in ("passed", "failed", "skipped"):
+                if key in event:
+                    row[key] = event[key]
+            timeline.append(row)
+    reviews = [e for e in timeline if e["event_type"] == "review"]
+    latest_review = reviews[-1] if reviews else None
+    blockers = [e for e in timeline if e["event_type"] == "blocker" and not e["resolved_by_record"]]
+    in_canonical = r.ancestor(change["commit"], r.canonical)
+    state_name = ("blocked" if blockers else "in_canonical_history" if in_canonical else
+        "review_rejected" if latest_review and latest_review["verdict"] == "reject" and not latest_review["resolved_by_record"] else
+        "review_attention" if latest_review and latest_review["verdict"] != "accept" and not latest_review["resolved_by_record"] else
+        "integrated_in_current_history" if r.ancestor(change["commit"]) else "published")
+    return safe({"change_id": args.change, "publication": summary(change), "branch": change["branch"],
+        "source_commit": change["commit"], "base_commit": change.get("base_commit"), "freshness": freshness,
+        "status": state_name, "timeline": timeline, "unverified_test_events": unavailable,
+        "canonical_incorporation": {"in_history": in_canonical, "branch": r.config["canonical_branch"],
+                                    "commit": r.output("rev-parse", r.canonical)},
+        "note": "Git ancestry 只證明曾納入歷史，可能已被後續修改／revert；不等於語意正確、Review Pass 或真人批准。"})
+
+
+def render_trace(value):
+    lines = [f"修改歷程：{value['change_id']}；目前狀態：{value['status']}",
+             f"來源：{value['source_commit']}；可能過期：{value['freshness']['may_be_stale']}"]
+    for row in value["timeline"]:
+        detail = row.get("summary", row.get("text", ""))
+        outcome = row.get("verdict", row.get("automated_result", row.get("result", "")))
+        lines.append(f"- {row['created_at']} | {row['person_id']} | {row['event_type']} | {outcome} | {detail}")
+        lines.append(f"  {row['event_id']}；依據：{row['relation']}")
+    lines += ["Canonical：" + json_text(value["canonical_incorporation"]).replace("\n", " "), value["note"]]
     return "\n".join(lines)

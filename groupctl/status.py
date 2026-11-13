@@ -85,6 +85,10 @@ def render_status(s):
     lines += [f"  {e['change_id']} ({e['person_id']}): {e['summary']} [current={e['in_current']}, canonical={e['in_canonical']}]"
               for e in s["pending_changes"]]
     lines += [f"  Blocker {e['event_id']}: {e['summary']} → {e['requested_action']}" for e in s["blockers"]]
+    if "freshness" in s:
+        lines.append(f"資料：{s['freshness']['mode']}；可能過期：{s['freshness']['may_be_stale']}")
+    for risk in s.get("potential_conflict_warnings", []):
+        lines.append(f"潛在風險 {risk['change_id']}：重疊檔案 {risk['overlapping_files']}，介面 {risk['interface_changes']}（非已證實 Git conflict）")
     if evidence:
         lines.append(f"受測 commit：{evidence['commit']}；與 HEAD 完全相同：{s['tests']['exact_current_commit']}")
     suggestions = {

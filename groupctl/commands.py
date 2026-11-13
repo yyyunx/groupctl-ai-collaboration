@@ -80,9 +80,13 @@ from .policy import unresolved_blockers, final_concerns
 
 
 def status(args):
-    r = repo(args)
-    r.fetch()
-    return state(r, r.events())
+    from .collaboration import observed, conflict_warnings
+    from .presentation import safe
+    r, events, freshness = observed(args)
+    result = state(r, events)
+    result["freshness"] = freshness
+    result["potential_conflict_warnings"] = conflict_warnings(r, events, result)
+    return safe(result)
 
 
 def sync(args):
