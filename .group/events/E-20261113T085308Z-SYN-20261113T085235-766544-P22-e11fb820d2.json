@@ -1,0 +1,48 @@
+{
+  "protocol_version": "0.1",
+  "event_id": "E-20261113T085308Z-SYN-20261113T085235-766544-P22-e11fb820d2",
+  "event_type": "change_published",
+  "group_id": "G-20261113T085235-766544",
+  "person_id": "SYN-20261113T085235-766544-P22",
+  "created_at": "2026-11-13T08:53:08.666538Z",
+  "related_events": [],
+  "change_id": "C-SYN-20261113T085235-766544-P22-0a53358a49",
+  "branch": "people/SYN-20261113T085235-766544-P22/work",
+  "commit": "83194044d3b03bada4b290eb9d86c8947d9d835b",
+  "summary": "Add arithmetic helper and positive/negative tests",
+  "files_changed": [
+    "collaboration_fixture/numbers_lib.py",
+    "collaboration_fixture_tests/test_numbers.py"
+  ],
+  "interface_changes": [],
+  "tests_run": [
+    "[\"C:\\\\Program Files\\\\WindowsApps\\\\OpenAI.CodexPrimaryRuntime.v26-1111-570-0_26.1111.570.0_x64__3k8sg7r9htsxt\\\\dependencies\\\\python\\\\python.exe\", \"-m\", \"unittest\", \"discover\", \"-s\", \"collaboration_fixture_tests\", \"-v\"]"
+  ],
+  "known_issues": [],
+  "proposed_for_integration": true,
+  "validation": {
+    "automated_result": "pass",
+    "results": [
+      {
+        "argv": [
+          "C:\\Program Files\\WindowsApps\\OpenAI.CodexPrimaryRuntime.v26-1111-570-0_26.1111.570.0_x64__3k8sg7r9htsxt\\dependencies\\python\\python.exe",
+          "-m",
+          "unittest",
+          "discover",
+          "-s",
+          "collaboration_fixture_tests",
+          "-v"
+        ],
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": "test_name (test_greet.GreetingTest.test_name) ... ok\ntest_negative (test_numbers.AdditionTest.test_negative) ... ok\ntest_positive (test_numbers.AdditionTest.test_positive) ... ok\n\n----------------------------------------------------------------------\nRan 3 tests in 0.000s\n\nOK\n",
+        "counts": [
+          3,
+          0,
+          0
+        ],
+        "evidence_state": "pass"
+      }
+    ]
+  }
+}

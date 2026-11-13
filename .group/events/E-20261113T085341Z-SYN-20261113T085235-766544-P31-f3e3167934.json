@@ -1,0 +1,47 @@
+{
+  "protocol_version": "0.1",
+  "event_id": "E-20261113T085341Z-SYN-20261113T085235-766544-P31-f3e3167934",
+  "event_type": "change_published",
+  "group_id": "G-20261113T085235-766544",
+  "person_id": "SYN-20261113T085235-766544-P31",
+  "created_at": "2026-11-13T08:53:41.495331Z",
+  "related_events": [],
+  "change_id": "C-SYN-20261113T085235-766544-P31-2ee0c8629d",
+  "branch": "people/SYN-20261113T085235-766544-P31/work",
+  "commit": "b037888a197c84b272612a4045612c7dd2b3e9c3",
+  "summary": "Use a welcoming greeting",
+  "files_changed": [
+    "collaboration_fixture/greet.py"
+  ],
+  "interface_changes": [],
+  "tests_run": [
+    "[\"C:\\\\Program Files\\\\WindowsApps\\\\OpenAI.CodexPrimaryRuntime.v26-1111-570-0_26.1111.570.0_x64__3k8sg7r9htsxt\\\\dependencies\\\\python\\\\python.exe\", \"-m\", \"unittest\", \"discover\", \"-s\", \"collaboration_fixture_tests\", \"-v\"]"
+  ],
+  "known_issues": [],
+  "proposed_for_integration": true,
+  "validation": {
+    "automated_result": "pass",
+    "results": [
+      {
+        "argv": [
+          "C:\\Program Files\\WindowsApps\\OpenAI.CodexPrimaryRuntime.v26-1111-570-0_26.1111.570.0_x64__3k8sg7r9htsxt\\dependencies\\python\\python.exe",
+          "-m",
+          "unittest",
+          "discover",
+          "-s",
+          "collaboration_fixture_tests",
+          "-v"
+        ],
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": "test_name (test_greet.GreetingTest.test_name) ... ok\n\n----------------------------------------------------------------------\nRan 1 test in 0.000s\n\nOK\n",
+        "counts": [
+          1,
+          0,
+          0
+        ],
+        "evidence_state": "pass"
+      }
+    ]
+  }
+}

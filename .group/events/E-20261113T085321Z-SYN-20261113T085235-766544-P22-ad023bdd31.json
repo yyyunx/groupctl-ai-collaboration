@@ -1,0 +1,20 @@
+{
+  "protocol_version": "0.1",
+  "event_id": "E-20261113T085321Z-SYN-20261113T085235-766544-P22-ad023bdd31",
+  "event_type": "review",
+  "group_id": "G-20261113T085235-766544",
+  "person_id": "SYN-20261113T085235-766544-P22",
+  "created_at": "2026-11-13T08:53:21.253362Z",
+  "related_events": [
+    "E-20261113T085257Z-SYN-20261113T085235-766544-P17-725fa126e3"
+  ],
+  "change_id": "C-SYN-20261113T085235-766544-P17-f89923dba1",
+  "verdict": "accept",
+  "summary": "SIMULATED review: preserves name and normalizes whitespace.",
+  "issues": [],
+  "tests_run": [],
+  "inspected_commit": "330738acd41ed828727c023ae898fa9fbb8036e0",
+  "evidence": [
+    "Exact diff inspected; combined checks follow."
+  ]
+}

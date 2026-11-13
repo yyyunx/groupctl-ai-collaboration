@@ -1,0 +1,48 @@
+{
+  "protocol_version": "0.1",
+  "event_id": "E-20261113T085330Z-SYN-20261113T085235-766544-P22-8773d887dd",
+  "event_type": "integration_result",
+  "group_id": "G-20261113T085235-766544",
+  "person_id": "SYN-20261113T085235-766544-P22",
+  "created_at": "2026-11-13T08:53:30.805044Z",
+  "related_events": [
+    "E-20261113T085257Z-SYN-20261113T085235-766544-P17-725fa126e3"
+  ],
+  "change_id": "C-SYN-20261113T085235-766544-P17-f89923dba1",
+  "target_branch": "people/SYN-20261113T085235-766544-P22/work",
+  "result": "success",
+  "merge_commit": "3a4dbe700e4ca10171c37351d9af9bd271ae748c",
+  "conflicts": [],
+  "conflict_resolution_summary": "No textual conflicts; preserve both greeting and arithmetic features",
+  "verification": {
+    "build": "not_applicable",
+    "tests": "pass",
+    "semantic_review": "pass"
+  },
+  "summary": "SIMULATED fixture assessment: greeting, whitespace and arithmetic intents inspected.",
+  "validation": {
+    "automated_result": "pass",
+    "results": [
+      {
+        "argv": [
+          "C:\\Program Files\\WindowsApps\\OpenAI.CodexPrimaryRuntime.v26-1111-570-0_26.1111.570.0_x64__3k8sg7r9htsxt\\dependencies\\python\\python.exe",
+          "-m",
+          "unittest",
+          "discover",
+          "-s",
+          "collaboration_fixture_tests",
+          "-v"
+        ],
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": "test_name (test_greet.GreetingTest.test_name) ... ok\ntest_trim (test_greet.GreetingTest.test_trim) ... ok\ntest_negative (test_numbers.AdditionTest.test_negative) ... ok\ntest_positive (test_numbers.AdditionTest.test_positive) ... ok\n\n----------------------------------------------------------------------\nRan 4 tests in 0.000s\n\nOK\n",
+        "counts": [
+          4,
+          0,
+          0
+        ],
+        "evidence_state": "pass"
+      }
+    ]
+  }
+}
