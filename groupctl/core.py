@@ -250,6 +250,8 @@ class Repository:
         try:
             self.git("push", "-u", self.remote, f"HEAD:refs/heads/{self.branch}")
         except GroupError as exc:
+            from .localstate import push_failure
+            push_failure(self, "event_push", [event["event_id"]])
             raise GroupError(f"Event is committed locally, NOT published. Retry git push; event {event['event_id']}.\n{exc}") from exc
         return event
 
