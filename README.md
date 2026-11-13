@@ -1,112 +1,216 @@
-# HW2：groupctl 小組協作工具
+# groupctl：人與 AI 的 Git 協作工具
 
-這份作業做的是「多位學生各自搭配 AI，透過同一個 GitHub repository 合作」的協作層。`groupctl` 是本機命令列工具，不需要 OpenAI/Gemini API，也不需要額外伺服器。
+**Group 3 — yyyunx，protocol 0.1，工具版本 0.2.0。**
+每位學生與自己的 AI 在各自電腦上開發，透過同一個 GitHub repository
+發布、審查、整合與測試，最後形成一份共同成果。這個工具不會啟動三個 AI，
+也不需要 OpenAI／Gemini API。AI 提供判斷，groupctl 執行機械操作並留下證據。
 
-## 功能與實際用途
+## 先看懂三件事
 
-假設 A 改解析器，B 改畫面，C 寫測試：A 完成後可以發布一筆有 commit、介面變動及測試資訊的修改；B 的 AI 能從遠端分支找到它，檢查實際 diff，整合後再次測試。重新開啟 AI 對話時，也能從 Git 恢復小組資訊。
+- **工具 repo**：你現在看的專案，提供 groupctl、Agent Skill、文件與測試。
+- **小組專案 repo**：你們真的要共同開發的程式；可以是另一個 repo。
+- **Demo**：自動建立三個模擬成員，驗證工具流程；所有審查決定和確認均標為 simulation，
+  不能當成真實組員的意見或正式作業核准。
 
-| 功能 | 你實際得到什麼 |
-|---|---|
-| 小組設定與身分 | `.group/group.json`、成員名單、本機身分與個人分支 |
-| SYNC / STATUS | 查詢所有遠端分支的公開事件，知道新進度及與 main 的差異 |
-| PUB | 測試、提交、推送程式，產生唯一 change ID 與修改說明 |
-| REV | 記錄審查結論與證據，不會自動合併 |
-| INT | 合併特定修改，列出衝突，另行執行測試與語意檢查 |
-| TEST | 記錄實際受測 commit、命令、輸出及結果；指定其他版本時使用隔離 worktree |
-| FINAL | 檢查 main、未整合提案與阻礙，產生報告草稿，經人確認後發布成果 |
+個人分支用 `people/<person_id>/<topic>`；設定的 canonical branch（預設 main）
+才是小組正式狀態。PUB 是發布提案，尚未代表接受；REV 通過也不會自動合併。
 
-`PUB` 是「讓大家看到」，進入 `main` 才是小組接受。事件是獨立且不可修改的 JSON；更正資訊要新增事件。只有 commit **並且 push 成功**的事件才算公開。
+## 安裝與第一次執行
 
-## 先執行看看
-
-需要 Git 與 Python 3.10 以上，核心程式只使用 Python 標準函式庫。Windows 啟動器也會尋找目前 Codex 隨附的 Python；換電腦可安裝 Python，或設定 `$env:GROUPCTL_PYTHON`。
-
-在這份資料夾開啟 PowerShell：
+需要 **Git、Python 3.10 以上**。核心程式沒有第三方 runtime dependency。
 
 ```powershell
+git clone https://github.com/yyyunx/groupctl-ai-collaboration.git
+cd groupctl-ai-collaboration
 .\run.ps1 --help
+.\run.ps1 demo
+```
+
+Windows 啟動器會尋找 Python 或 py launcher；也可指定：
+
+```powershell
+$env:GROUPCTL_PYTHON = "C:\你的Python路徑\python.exe"
+.\run.ps1 --version
+```
+
+跨平台直接執行，或安裝為 CLI：
+
+```text
+python -m groupctl --help
+python -m pip install -e .
+groupctl --help
+```
+
+下文的 python 代表實際的 Python 3.10+ 執行檔；有些系統名稱為 python3。
+使用 launcher 不需要 pip 安裝。
+
+## 讓自己的 AI 使用
+
+請 AI 讀取 `AGENTS.md` 與 `AGENT_COLLABORATION.md`。
+Claude／Gemini 亦有 `CLAUDE.md`、`GEMINI.md` 入口。
+
+例如對能讀檔、執行終端機的 AI 說：
+
+> 請閱讀 AGENT_COLLABORATION.md，依照 groupctl 流程協作。
+> 目標專案是「我的專案路徑」。先檢查小組設定和身分；
+> 之後收到 SYNC、PUB、INT、REV、TEST、STATUS、FINAL 時照文件執行。
+
+可攜 Skill 位於 `.agents/skills/group-collaboration/`，包含 SKILL.md 與內部 references。
+可供支援 Agent Skills 的工具載入，也可讓 AI 明確讀取 SKILL.md。
+安裝 Skill 不會自動安裝 Python package；兩者都要可用。
+Skill 格式及 Codex discovery 見 [官方說明](https://learn.chatgpt.com/docs/build-skills)。
+
+## 建立小組：第一位成員
+
+以下假設另一個 team-project 已有 main、應用程式與真正的 tests，且已設定 origin。
+先在工具目錄執行。把 assignment.md 換成真實需求；examples 只作為格式範例。
+
+```powershell
+.\run.ps1 --repo ..\team-project init --group G01 --person P17 --name "同學 A" --assignment .\examples\assignment.md --checks-file .\examples\checks.json
+git -C ..\team-project add .group
+git -C ..\team-project commit -m "Initialize group collaboration"
+git -C ..\team-project push origin main
+git -C ..\team-project switch -c people/P17/work
+.\run.ps1 --repo ..\team-project status --format text
+```
+
+`init` 建立 .group 設定，不會偷偷提交其他檔案。空 Git repo 也可先初始化，
+但發布與結案前必須加入有意義的驗證命令／測試。
+
+`.group/group.json` 的可選 validation_commands 使用 argv 陣列：
+
+```json
+{
+  "validation_commands": [
+    ["{python}", "-m", "unittest", "discover", "-s", "tests", "-v"]
+  ]
+}
+```
+
+`{python}` 只在命令第一個引數展開為目前執行工具的 Python。
+不經 shell，不使用 `&&` 串指令。可以列出 build、lint、unit 等多個命令。
+缺少命令、零個測試、全部 skipped 或執行環境缺失都不會假裝通過。
+任意自訂命令的品質仍由小組負責，工具無法證明它真的測了需求。
+
+## 加入小組：其他成員
+
+每位成員各自 clone 同一個 team repo，並具有 push 權限。在自己的 team clone 中，
+使用已安裝的 groupctl：
+
+```text
+groupctl join --person P22 --name "同學 B" --topic renderer
+groupctl status --format text
+```
+
+第三位使用不同身分，例如 P31。join 從遠端 canonical 建立個人分支，
+提交成員描述並推送。既有成員重新 clone，使用 `identity --person P17`，
+再建立自己的個人分支。重要進度來自 Git／公開事件，不需複製舊聊天紀錄。
+
+## 七大協作指令
+
+這些大寫詞是**對 AI 說的提示指令**；下表是它背後使用的 CLI。
+所有 CLI 預設回傳 JSON，`--repo PATH` 要放在 subcommand 前。
+
+| 對 AI 說 | 工具操作與重點 |
+|---|---|
+| SYNC | `sync` 探索所有相關遠端分支事件；確認安全後 `sync --update` 只合併 canonical，並驗證 |
+| PUB | `pub --summary "完成內容"`；可重複提供 --interface-change、--known-issue |
+| REV C-… | 先 `inspect C-…`，實際讀 diff／程式後 `review C-… --file review.json` |
+| INT C-… | `integrate C-…`，處理衝突及語意，再 `integrate-finish --file semantic.json` |
+| TEST | `test`、`test main` 或 `test C-…`；每個 scope 都用 isolated worktree |
+| STATUS | `status` 或 `status --format text`；顯示 dirty、pending changes、Tests、Blockers 與下一步 |
+| FINAL | `final-prepare --result "完成內容"`，展示草稿，再經真正的人類確認發布 |
+
+審查 JSON 範例在 examples/review.json；inspected_commit 必須是實際讀過的完整 hash，
+diff_inspected 必須為 JSON boolean true。四種 verdict：
+accept、accept_with_changes、reject、needs_more_evidence。
+
+語意審查範例在 examples/semantic-review.json；reviewed_commit 必須等於整合後 HEAD。
+自動合併不會預設語意成功。沒有 tests 的整合最多是 needs_human。
+
+一般 finding／question／answer／blocker 用
+`event --type finding --file payload.json --related E-…` 發布。
+關聯必須存在、屬於同組且不能形成 cycle；更正資訊要新增事件。
+解決 blocker 或審查問題可附 resolves_events，並在 related_events 指向原事件、提供理由／證據。
+
+## 最終成果與真人確認
+
+1. 用一般 Git merge 將已審查、整合和驗證的工作納入 canonical，再推送。
+2. 在 clean 且與遠端一致的 canonical 執行 final-prepare。
+3. 工具檢查 pending changes、review／integration concerns、blockers，執行隔離驗證，
+   產生 .group/final/candidate.md 及候選事件。
+4. **把實際候選報告給真人看。** 正式互動終端執行
+   `final-publish E-候選ID --confirm` 後，真人須鍵入指定候選 ID 和報告 hash。
+5. 非互動情境需真人提供 `--confirmation-file`，並同時指定 --confirm。
+   JSON 必須包含 candidate_id、canonical_commit、report_sha256、confirmed_by、
+   confirmed_at（具時區且不早於候選建立）、statement。
+   AI 不得替真人編造同意內容。輸入檔放在 .group/local 或專案外。
+6. 候選報告／程式／設定改變、出現新提案、失敗證據或未解 blocker 時，停止並重新確認。
+7. 成功後推送 final_report.md、final.json、final_result，記錄精確受測 canonical commit。
+
+有意拒絕／淘汰尚未合併提案時，準備 change ID 到理由的 JSON map，
+提供給 final-prepare --dispositions。重要但未知的工作不可直接忽略。
+有已知限制可使用 --limitation，記錄為 completed_with_known_limitations。
+
+`init --simulation` 只用於生成的測試情境，報告／事件／envelope 明確標示 simulation；
+它不提供真實人類確認，也不應用於正式小組設定。
+
+## 測試與 15-step Demo
+
+```powershell
 .\run.ps1 test-suite
 .\run.ps1 demo
 ```
 
-`demo` 會建立新的本機 bare Git remote 與 A/B/C 三個獨立 clone，實際執行發布、同步、審查、正常整合、衝突與解決、測試及模擬結案，最後印出成果位置。每次建立新目錄，不覆寫上次結果。這是離線驗證，不會推送到你的 GitHub。
+或使用 `python -m unittest discover -s tests -v`、
+`python scripts/demo.py`。Demo 建立三個獨立 clone 及 bare remote，實際執行
+PUB → SYNC → REV → INT → TEST → FINAL、真正的 Git 衝突與已知案例解決，
+最後另開全新 clone 檢查恢復。輸出 acceptance.json、transcript.json、summary.json。
 
-也可以直接執行：
+另有**明確會推送新驗證分支**的遠端模式：
 
 ```text
-python -m groupctl --help
-python -m unittest discover -s tests -v
-python scripts/demo.py
+python scripts/demo.py --remote https://github.com/OWNER/REPO.git --base-ref origin/synthesis/groupctl-final
 ```
 
-## 用在真正的小組 GitHub repository
+需寫入權限與不含真實 .group 的基底。它建立具唯一 ID 的驗證 canonical 與三位模擬成員分支，
+不更新遠端 main；summary 記錄所有分支。所有人工判斷仍為 simulation。
+一般本機 demo 不會連到 GitHub。
 
-先建立空的 GitHub repository，以下指令中的網址請換成自己的。先在本工具資料夾執行；`--repo` 指向你們的專案 clone。
+CI 在 Ubuntu／Windows 執行完整 suite、Demo、package 安裝 smoke。
+是否真的通過，以 Actions 結果與 evidence/synthesis 為準，不以有 workflow 檔案當成功證據。
 
-```powershell
-git clone https://github.com/YOUR-GROUP/YOUR-REPO.git ..\group-project
-git -C ..\group-project switch -c main
-git -C ..\group-project config user.name "Your Name"
-git -C ..\group-project config user.email "your-email@example.com"
-.\run.ps1 --repo ..\group-project init --group G-12 --person P17 --name "同學 A" --assignment .\examples\assignment.md --checks-file .\examples\checks.json
-```
+## 常見錯誤與恢復
 
-`examples/checks.json` 是 Python unittest 範例，請先把它改成專案真正的測試命令，並加入有意義的測試。命令以 JSON 引數陣列儲存，不經 shell 解譯。例如 `[["python", "-m", "unittest", "discover", "-s", "tests", "-v"]]`。
-
-如果系統沒有 PATH 中的 `python`，請將範例 JSON 的第一個元素改為你實際使用的 Python 完整路徑。`demo` 會自動使用啟動器找到的執行檔，不需調整。
-
-`init` 建立 `.group`，不會偷偷提交其他檔案。確認內容後：
-
-```powershell
-git -C ..\group-project add .group
-git -C ..\group-project commit -m "Initialize group collaboration"
-git -C ..\group-project push -u origin main
-git -C ..\group-project switch -c people/P17/work
-.\run.ps1 --repo ..\group-project status
-```
-
-其他成員各自 clone，使用 `join --person P22 --name "同學 B" --topic renderer`。它會從遠端 main 建立 `people/P22/renderer`、提交成員資料並推送。既有成員重新 clone，可用 `identity --person P17` 選擇本機身分，再建立自己的工作分支。
-
-## 你對 AI 說的指令，和工具指令不同
-
-將 [AGENT_COLLABORATION.md](AGENT_COLLABORATION.md) 提供給各自的 AI。你說 `INT C-...`，AI 依規格先查 diff、判斷影響，再呼叫工具；工具不會假裝自己能理解所有程式行為。
-
-| 對 AI 說 | AI 主要使用的工具命令 |
+| 情況 | 做法 |
 |---|---|
-| `SYNC` | `sync` 先看紀錄；確認安全後 `sync --update` 合併 main |
-| `PUB` | `pub --summary "完成的功能" --interface-change "介面變更"` |
-| `REV C-...` | `inspect C-...`，實際審查後 `review C-... --file 審查.json` |
-| `INT C-...` | `inspect C-...`、`integrate C-...`，再 `integrate-finish --file 語意檢查.json` |
-| `TEST` | `test`；亦可 `test main` 或 `test C-...` |
-| `STATUS` | `status` |
-| `FINAL` | `final-prepare --result "完成內容"`，展示報告，再由人確認 `final-publish E-... --confirm` |
+| 找不到 Python | 安裝 3.10+，或設定 GROUPCTL_PYTHON；不需安裝 AI API SDK |
+| not a git repository／沒有 .group | 指向正確 team clone；第一位 init，其他成員先 clone |
+| working tree is not clean | 先保護並整理未完成修改；工具不會自動丟棄 dirty work |
+| push 被拒絕／NOT published | 檢查權限與網路、fetch 並處理分歧後重試 push；不可 force push |
+| not_available／partial | 補上有意義的測試、依賴或人工檢查；不能當 pass |
+| Git conflict | 檢查雙方意圖、修改並提交，再 integrate-finish；不清楚時問真人 |
+| 放棄未完成整合 | integrate-abort；已提交的 merge 不會被偷偷 reset，需刻意 revert |
+| Broken related_events／immutable event 變更 | 找回原事件與正確分支；不要修改已公開檔案或無聲略過錯誤 |
+| stale candidate／report changed | 對新的 canonical 狀態重新驗證、產生候選，再請真人確認 |
+| 正式非互動 --confirm 被拒絕 | 取得候選綁定的真人確認檔；不要讓 AI 使用 Demo 的模擬批准 |
 
-指令一律回傳 JSON。exit code：0 成功；1 操作錯誤或前置條件不符；2 驗證未通過、證據不足或仍有合併衝突。`integrate` 即使 Git 成功，也只完成第一階段。
+Exit code：0 成功；1 操作／前置條件錯誤；2 CLI 用法錯誤或驗證失敗／不足／尚有衝突。
+有些失敗的 TEST 會成功發布「失敗證據」，但仍回傳非零 exit code。
 
-審查與語意檢查範例在 `examples/`。檔案中的 commit 必須替換成實際檢查過的完整 hash。把這些輸入檔放在專案外或 `.group/local/`，以免成為未提交檔案阻擋操作。
+## 架構與證據
 
-驗證過的個人分支納入 main，使用普通 Git：先同步、檢查，再合併指定的已驗證分支，重新測試並推送。任何成員均可執行；不需要永久整合者。main 有新修改時 Git push 會拒絕過期提交，必須先同步處理，不使用 force push。
+- groupctl/core.py：Git、身分、不可變事件存取／封存、worktree、private-index snapshot。
+- groupctl/events.py：十種事件 schema、型別、enum 與關聯 graph。
+- groupctl/validation.py：無 shell 的檢查執行、零測試／skip／環境／failure 分類。
+- groupctl/commands.py：既有核心 CLI 操作；模組匯入相容保留。
+- groupctl/status.py／policy.py：狀態投影、建議與 blocker／final concerns。
+- groupctl/finalization.py：candidate、時效、證據與真人確認。
+- .group/local：可丟棄的本機支援資料；公開事件會封存在推送歷史中。
+- spec/：原始八份作業規格，保留不改。
+- [整合報告](docs/SYNTHESIS_REPORT.md)、[實作差異](docs/IMPLEMENTATION_SUMMARY.md)。
+- evidence/ 下舊紀錄是原版歷史；本次結果在 evidence/synthesis/。
 
-## 檔案位置
-
-```text
-groupctl/                 Python 命令列實作
-tests/                    使用真實 Git 的整合與失敗路徑測試
-scripts/demo.py           三成員完整離線示範
-AGENT_COLLABORATION.md     可給不同 AI 使用的操作指引
-examples/                 設定、審查與語意檢查範例
-spec/                     原始 8 份作業規格，保留不改
-evidence/                 實際執行結果與規格對照
-```
-
-受管理的專案會建立規格要求的 `.group/assignment/`、`.group/members/`、`.group/events/`、`.group/final/` 與 `.group/local/`。本機快取不作為唯一的小組紀錄。
-
-## 範圍與限制
-
-- 實作協作層，沒有 Dispatcher、自動任務分派或 AI API 呼叫。
-- 0.1 的成員檔案是身分描述，沒有安全認證功能，與原規格一致。
-- 語意審查由 AI／人提供，工具會記錄與要求具體 commit，但無法證明審查者真的理解了程式。
-- 秘密檔案檢查涵蓋常見私鑰、token 與敏感檔名，發布前仍需要 AI 檢查 diff。
-- `TEST` 支援任意驗證命令；不能可靠解析的測試數量記為 null，不會編造通過數。
-- GitHub 遠端使用同一套 Git fetch/push；目前附帶的驗證使用本機 remote。實際 GitHub 展示仍需要小組的 repository 與登入權限。
+Protocol 0.1 的成員與確認屬 attestation，沒有安全身分認證；工具無法驗證自然人身分、
+AI 語意判斷品質或任意自訂測試的充分性。測試 worktree 可隔離專案檔案修改，
+不是不可信程式的安全沙箱：驗證命令仍以你的作業系統帳號權限執行。

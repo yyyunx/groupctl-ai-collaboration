@@ -129,7 +129,23 @@ class Repository:
 
     def events(self):
         """Read public events from ALL remote branches without merging those branches."""
-        refs = self.output("for-each-ref", "--format=%(refname)", f"refs/remotes/{self.remote}/").splitlines()
+        remote_refs = self.output("for-each-ref", "--format=%(refname)", f"refs/remotes/{self.remote}/").splitlines()
+        refs = []
+        for ref in remote_refs:
+            config_entry = self.output("ls-tree", ref, "--", ".group/group.json")
+            if not config_entry:
+                if self.output("ls-tree", "-r", ref, "--", ".group/events/"):
+                    raise GroupError(f"Remote events have no group configuration: {ref}")
+                continue
+            config_blob = config_entry.split()[2]
+            try:
+                scope = json.loads(self.git("cat-file", "blob", config_blob, binary=True).stdout)
+            except ValueError as exc:
+                raise GroupError(f"Invalid remote group configuration: {ref}") from exc
+            if not isinstance(scope, dict):
+                raise GroupError(f"Invalid remote group configuration: {ref}")
+            if scope.get("group_id") == self.config["group_id"]:
+                refs.append(ref)
         events, contents, blobs = {}, {}, {}
         if refs:
             # Inspect historical filenames too: a force-updated event on a single
@@ -176,12 +192,18 @@ class Repository:
                                "event_type": kind, "group_id": self.config["group_id"], "person_id": person,
                                "created_at": now(), "related_events": list(related), **fields})
 
-    def publish(self, event, extra=()):
+    def publish(self, event, extra=(), *, expected_public_ids=None, expected_canonical=None):
         validate_event(event)
         if event["group_id"] != self.config["group_id"] or event["person_id"] != self.identity():
             raise GroupError("Publication envelope must match current group and identity")
         self.fetch()
         public = self.events()
+        if expected_public_ids is not None and {e["event_id"] for e in public} != set(expected_public_ids):
+            raise GroupError("Group state changed before publication; revalidate the final candidate",
+                             hint="Generated final files may be uncommitted. Inspect them and prepare a fresh candidate.")
+        if expected_canonical is not None and (self.head != expected_canonical or
+                self.output("rev-parse", self.canonical) != expected_canonical):
+            raise GroupError("Canonical state changed before publication; revalidate the final candidate")
         path = self.meta / "events" / f"{event['event_id']}.json"
         if path.exists():
             raise GroupError("Refusing to overwrite an immutable event")
@@ -242,8 +264,12 @@ class Repository:
         if not re.fullmatch(r"[0-9a-f]{40,64}", commit):
             raise GroupError("Published change must use an exact commit hash")
         self.git("cat-file", "-e", f"{commit}^{{commit}}")
-        if not self.ancestor(commit, f"refs/remotes/{self.remote}/{branch}"):
+        source_ref = f"refs/remotes/{self.remote}/{branch}"
+        branch_exists = self.git("show-ref", "--verify", "--quiet", source_ref, ok=(0, 1)).returncode == 0
+        if branch_exists and not self.ancestor(commit, source_ref):
             raise GroupError("Change commit is not contained in its published remote branch")
+        if not branch_exists and not self.ancestor(commit, self.canonical):
+            raise GroupError("Source branch is missing and the change is not accepted in canonical history")
         return event
 
     def checks(self, checks=None):
@@ -291,4 +317,6 @@ class Repository:
             "commands": [json.dumps(r["argv"], ensure_ascii=False) for r in checks["results"]],
             "automated_result": checks["automated_result"], "passed": passed, "failed": failed,
             "skipped": skipped, "human_checks_required": list(human),
-            "summary": f"Automated validation: {checks['automated_result']}", "command_results": checks["results"]})
+            "summary": f"Automated validation: {checks['automated_result']}", "command_results": checks["results"],
+            "validation_issues": ([checks["summary"]] if checks.get("summary") else []) +
+                                 [r["error"] for r in checks["results"] if "error" in r]})

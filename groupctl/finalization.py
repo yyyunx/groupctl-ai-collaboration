@@ -123,7 +123,11 @@ def final_publish(args):
     text = (r.meta / "final/candidate.md").read_text(encoding="utf-8")
     if hashlib.sha256(text.encode()).hexdigest() != candidate["report_sha256"]:
         raise GroupError("Candidate report changed; prepare it again")
+    expected_head = r.head
     confirmation = confirm_candidate(r, args, candidate, text)
+    canonical_ready(r)
+    if r.head != expected_head or {e["event_id"] for e in r.events()} != {e["event_id"] for e in events}:
+        raise GroupError("Group state changed during human confirmation; inspect it and revalidate the candidate")
     (r.meta / "final/final_report.md").write_text(text, encoding="utf-8")
     envelope = {"protocol_version": "0.1", "group_id": r.config["group_id"],
                 "canonical_branch": r.config["canonical_branch"], "canonical_commit": commit,
@@ -135,8 +139,9 @@ def final_publish(args):
     event = r.event("final_result", {"canonical_commit": commit, "final_report_path": envelope["report_file"],
         "test_evidence": candidate["test_evidence"], "known_limitations": candidate["known_issues"],
         "initiated_by": r.identity(), "human_confirmation": confirmation,
-        "evidence_mode": envelope["evidence_mode"]}, [candidate["event_id"]])
-    r.publish(event, [".group/final/final_report.md", ".group/final/final.json"])
+        "evidence_mode": envelope["evidence_mode"], "validated_events": sorted(e["event_id"] for e in events)}, [candidate["event_id"]])
+    r.publish(event, [".group/final/final_report.md", ".group/final/final.json"],
+              expected_public_ids={e["event_id"] for e in events}, expected_canonical=expected_head)
     return {"published": True, "final": envelope, "event": event}
 
 

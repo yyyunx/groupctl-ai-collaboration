@@ -40,10 +40,12 @@ def run_checks(root, commands, timeout=300):
             counts = parse_counts(output)
             # unittest exits 0 even with zero tests; pytest exits 5 for no collection.
             empty = counts == (0, 0, 0) or (process.returncode == 5 and "no tests ran" in output)
+            skipped_only = counts is not None and counts[0] == counts[1] == 0 and counts[2] > 0
             result = {"argv": command, "exit_code": process.returncode,
                       "stdout": process.stdout[-16000:], "stderr": process.stderr[-16000:],
                       "counts": list(counts) if counts is not None else None,
-                      "evidence_state": "not_available" if empty else "fail" if process.returncode else "pass"}
+                      "evidence_state": "not_available" if empty else "fail" if process.returncode or (counts and counts[1])
+                                        else "partial" if skipped_only else "pass"}
         except (OSError, subprocess.TimeoutExpired) as exc:
             result = {"argv": command, "exit_code": None, "error": str(exc), "evidence_state": "partial"}
         results.append(result)

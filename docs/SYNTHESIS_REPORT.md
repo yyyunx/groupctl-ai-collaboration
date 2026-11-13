@@ -25,7 +25,7 @@
 
 重新實作 STATUS 的待整合清單、介面提醒、測試關聯與依狀態選擇的下一步建議，位於 `groupctl/status.py`。
 採用依責任拆分模組的概念，新增 `events.py`、`validation.py`、`policy.py`、`finalization.py`、`errors.py`；保留 Group 3 package 與公開匯入介面。
-可攜 Skill、多 agent 指引及 15-step 對照將於後續提交補齊。
+可攜 Skill 位於 `.agents/skills/group-collaboration/`；AGENTS／CLAUDE／GEMINI 指向同一份完整程序，避免三份文件逐漸分歧。`scripts/demo.py` 逐步記錄 15 個驗收項目，並加入 fresh-session recovery。
 
 ## Adopt from Group 2
 
@@ -59,7 +59,9 @@ Group 2 的靜態事件檢查被延伸為正式執行路徑中的 `validate_even
 - 第一批新 event contract：8 tests 全數通過，包含多組 subtests。
 - 第一輪三人 smoke 找到模組拆分後漏掉 `json` 匯入，已修正並重跑；後續結果將記錄於證據目錄。
 
-完整 regression、15-step demo、GitHub remote 驗證與最終 main 整合尚在進行中。這份進度報告不宣稱已完成最終驗收。
+第二批已實際執行：完整 suite 44 tests 全數通過（251.448 秒）；15-step 本機 Demo 全部通過；來源分支刪除後的封存恢復與不同群組隔離 2 tests 通過；Skill validator 回報 valid；Python package 成功 build/install 並從獨立安裝目錄啟動 CLI。
+
+第一批已推送 `3291414` 至 synthesis/groupctl-final。第二批另加入 skipped-only、確認期間新增 blocker 的防護，最終完整 suite、真實 GitHub remote 與 main 整合仍待最後驗證。此時不宣稱最終驗收完成。
 
 ## Known Limitations
 

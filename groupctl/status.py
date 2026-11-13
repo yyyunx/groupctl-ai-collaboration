@@ -13,7 +13,7 @@ def state(r, events):
     seen = set(read_json(sync_path).get("seen", [])) if sync_path.exists() else set()
     counts = r.output("rev-list", "--left-right", "--count", f"HEAD...{r.canonical}").split()
     person, head = r.identity(), r.head
-    raw = r.output("status", "--porcelain")
+    raw = r.git("status", "--porcelain=v1").stdout.rstrip("\r\n")
     conflicts = r.output("diff", "--name-only", "--diff-filter=U").splitlines()
     pending = []
     for event in events:
@@ -87,5 +87,19 @@ def render_status(s):
     lines += [f"  Blocker {e['event_id']}: {e['summary']} → {e['requested_action']}" for e in s["blockers"]]
     if evidence:
         lines.append(f"受測 commit：{evidence['commit']}；與 HEAD 完全相同：{s['tests']['exact_current_commit']}")
-    lines.append("下一步：" + s["recommended_next_action"])
+    suggestions = {
+        "merge_conflict": "檢查雙方意圖，解決衝突並提交，再執行 integrate-finish。",
+        "dirty_worktree": "先保護未完成的修改，檢查 diff；完成後再 PUB 或 SYNC --update。",
+        "integration_pending": "檢查功能是否相容，提供精確 commit 的語意審查後執行 integrate-finish。",
+        "push_pending": "重試目前分支的 git push；本機提交的事件還沒有公開。",
+        "blocker": "先釐清 blocker、發布解決證據，再準備 FINAL。",
+        "missing_tests": "設定真正的 validation_commands；沒有測試不能算通過。",
+        "validation_failed": "檢查失敗或缺少的驗證環境，修正後重新 TEST。",
+        "sync_needed": "先 SYNC 並閱讀新事件，確認安全後更新正式版本。",
+        "pending_change": "用 change ID 檢查隊友的修改，再 REV 或 INT。",
+        "untested_code": "執行 TEST，為目前程式碼留下測試證據。",
+        "canonical_pending": "審查通過後，用一般 Git merge 將已驗證貢獻納入正式分支。",
+        "up_to_date": "繼續約定的工作；全組準備好時再產生 FINAL 草稿，交由真人確認。",
+    }
+    lines.append("下一步：" + suggestions[s["next_action_reason"]])
     return "\n".join(lines)

@@ -277,7 +277,7 @@ def integrate_finish(args):
     checks = r.check_commit(r.head)
     r.clean()
     result = "success" if checks["automated_result"] == "pass" and assessment["semantic_review"] == "pass" else "failed"
-    if checks["automated_result"] in {"not_available", "partial"}:
+    if checks["automated_result"] in {"not_available", "partial"} and assessment["semantic_review"] == "pass":
         result = "needs_human"
     event = r.event("integration_result", {"change_id": saved["change_id"], "target_branch": r.branch,
         "result": result, "merge_commit": r.head, "conflicts": saved["conflicts"],
