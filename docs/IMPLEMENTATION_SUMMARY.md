@@ -11,6 +11,8 @@ CLI 名稱與 protocol 0.1 保留，package 版本提升為 0.2.0。
 | 關聯 | 未檢查 related_events 是否存在 | 檢查存在、同組、duplicate、self reference、cycle、answer/question matching、resolves reference | groupctl/events.py |
 | 公開紀錄保存 | 依賴遠端 feature branches 的事件 union | 發布時封存原始 public event blobs，新的 canonical clone 可獨立恢復 | groupctl/core.py |
 | 已刪除來源分支 | 無法 inspect 已接受 change | 若 commit 在 canonical ancestry 中，可從封存證據檢查；未接受且來源消失仍拒絕 | groupctl/core.py |
+| Historical Diff | 合併到 canonical 後 merge-base 可能等於 change，得到空 diff | PUB 記錄 optional base_commit；inspect 以原基底重建多 commit 貢獻，legacy fallback 有明確 warning | groupctl/commands.py |
+| Merge-only Event Mutation | git log 預設可能省略 merge diff | --full-history -m 對每個 merge parent 檢查事件修改／刪除，兩個獨立 clone 均能拒絕 | groupctl/core.py |
 | 其他群組驗證分支 | 讀取到不同 group 即失敗 | 先依該分支 group.json 分組；同組內仍嚴格拒絕錯誤 group/reference | groupctl/core.py |
 | TEST current | 在使用者工作目錄跑測試 | 所有 scope 都在 disposable worktree；偵測測試改動並回報失敗 | groupctl/core.py、commands.py |
 | PUB checks | 原工作目錄執行，測試可能改使用者檔案 | private Git index snapshot → isolated worktree；保留 staged/unstaged 差異 | groupctl/core.py、commands.py |
@@ -43,3 +45,8 @@ CLI 名稱與 protocol 0.1 保留，package 版本提升為 0.2.0。
 - scripts/demo.py：逐項執行 15-step acceptance；遠端模式僅建立新的驗證分支。
 
 完整結果、測試對應 commit 與工程判斷界線見 SYNTHESIS_REPORT.md 和 evidence/synthesis/。
+
+最終 runtime 修復提交為 `2c4c00a6e9d85c2ca31c19a93bbf91639bb29b18`。
+完整 suite：50/50 通過；其中 15 項原有測試、8 項 contract、5 項 CLI、6 項 validation、16 項 synthesis regressions。
+Ubuntu／Windows Actions #43410027587 均成功，包含完整 suite、15-step Demo 及 package installation。
+真實 GitHub Remote Demo 於 `40e8d70` 完成 15/15；所有模擬人類判斷均保持 simulation 標記。

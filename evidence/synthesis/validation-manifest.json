@@ -1,0 +1,70 @@
+{
+  "base_selection": "Group 3 — yyyunx",
+  "base_commit": "f36cc8c18fac68c5a3aeee05469aaee713b3a267",
+  "reference_commits": {
+    "group1": "8713dd786b552d6d64f4f7123cb64c9d3b013c2c",
+    "group2": "30da54a549fce80cbdbabc24bd355f16d3c68fe4"
+  },
+  "tested_runtime_commit": "2c4c00a6e9d85c2ca31c19a93bbf91639bb29b18",
+  "tests": {
+    "passed": 50,
+    "failed": 0,
+    "seconds": 437.633,
+    "original_tests_preserved": 15,
+    "contract": 8,
+    "cli": 5,
+    "validation": 6,
+    "synthesis_regressions": 16
+  },
+  "ci": {
+    "run_id": 43410027587,
+    "url": "https://github.com/yyyunx/groupctl-ai-collaboration/actions/runs/43410027587",
+    "jobs": [
+      {
+        "id": 131833827535,
+        "name": "verify (windows-latest)",
+        "conclusion": "success"
+      },
+      {
+        "id": 131833827663,
+        "name": "verify (ubuntu-latest)",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "original_spec_tree": "b498d660f1c49f5c0d4453f06fdfb670ad8bc78c",
+  "github_remote_demo": {
+    "tested_runtime_commit": "40e8d70841ece01dac8892abf447b476cb068020",
+    "actual_transport": "GitHub HTTPS",
+    "acceptance_steps": 15,
+    "command_count": 58,
+    "application_tests_passed": 4,
+    "canonical_commit": "f49da3a6a8b42cccef9dd490f45a828b0a949c9c",
+    "branches": [
+      "synthesis/verification/20261113T085235-766544",
+      "people/SYN-20261113T085235-766544-P17/greeting",
+      "people/SYN-20261113T085235-766544-P22/work",
+      "people/SYN-20261113T085235-766544-P31/work"
+    ],
+    "evidence_mode": "simulation",
+    "real_human_feedback_claimed": false
+  },
+  "human_judgment": {
+    "engineering_analysis": "source inspection and observed regression evidence",
+    "real_group_member_feedback_received": false,
+    "human_approval_in_test_fixtures": "simulated; never formal approval"
+  },
+  "reproduction_commands": [
+    "python -m unittest discover -s tests -v",
+    "python scripts/demo.py"
+  ],
+  "environment": {
+    "python": "3.12.14",
+    "git": "2.46.1.windows.1",
+    "host": "Windows",
+    "ci": [
+      "Ubuntu Python 3.12",
+      "Windows Python 3.12"
+    ]
+  }
+}

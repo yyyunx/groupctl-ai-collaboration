@@ -128,6 +128,9 @@ accept、accept_with_changes、reject、needs_more_evidence。
 語意審查範例在 examples/semantic-review.json；reviewed_commit 必須等於整合後 HEAD。
 自動合併不會預設語意成功。沒有 tests 的整合最多是 needs_human。
 
+PUB 會記錄 optional base_commit，讓已合併 change 的歷史 diff 仍可重建；舊事件缺少基底時會顯示 legacy warning，可能只能呈現最後一個 commit，需進一步閱讀 Git history。
+事件不可變性亦檢查 merge commit 的每個 parent，不能藉由只在 merge 時改寫 JSON 來避過檢查。
+
 一般 finding／question／answer／blocker 用
 `event --type finding --file payload.json --related E-…` 發布。
 關聯必須存在、屬於同組且不能形成 cycle；更正資訊要新增事件。
