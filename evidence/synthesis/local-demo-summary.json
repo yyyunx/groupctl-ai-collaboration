@@ -1,0 +1,98 @@
+{
+  "mode": "local bare Git remote",
+  "evidence_mode": "simulation",
+  "human_confirmation": "simulated fixture, not real human feedback",
+  "people": [
+    "P17",
+    "P22",
+    "P31"
+  ],
+  "changes": [
+    "C-P17-a9ef0d28b7",
+    "C-P22-82b588fbaa",
+    "C-P31-95be3e3200"
+  ],
+  "normal_integration": "success",
+  "conflicting_files": [
+    "greet.py"
+  ],
+  "conflict_integration": "success",
+  "test_result": {
+    "protocol_version": "0.1",
+    "event_id": "E-20261113T085310Z-P22-2b219ddea0",
+    "event_type": "test_result",
+    "group_id": "G-DEMO",
+    "person_id": "P22",
+    "created_at": "2026-11-13T08:53:10.952639Z",
+    "related_events": [],
+    "scope": "current",
+    "commit": "eacb1db658cf71cf8ef5e362e3357651f09d8a65",
+    "commands": [
+      "[\"C:\\\\Program Files\\\\WindowsApps\\\\OpenAI.CodexPrimaryRuntime.v26-1111-570-0_26.1111.570.0_x64__3k8sg7r9htsxt\\\\dependencies\\\\python\\\\python.exe\", \"-m\", \"unittest\", \"discover\", \"-s\", \"tests\", \"-v\"]"
+    ],
+    "automated_result": "pass",
+    "passed": 4,
+    "failed": 0,
+    "skipped": 0,
+    "human_checks_required": [],
+    "summary": "Automated validation: pass",
+    "command_results": [
+      {
+        "argv": [
+          "C:\\Program Files\\WindowsApps\\OpenAI.CodexPrimaryRuntime.v26-1111-570-0_26.1111.570.0_x64__3k8sg7r9htsxt\\dependencies\\python\\python.exe",
+          "-m",
+          "unittest",
+          "discover",
+          "-s",
+          "tests",
+          "-v"
+        ],
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": "test_name (test_greet.GreetingTest.test_name) ... ok\ntest_trim (test_greet.GreetingTest.test_trim) ... ok\ntest_negative (test_numbers.AdditionTest.test_negative) ... ok\ntest_positive (test_numbers.AdditionTest.test_positive) ... ok\n\n----------------------------------------------------------------------\nRan 4 tests in 0.000s\n\nOK\n",
+        "counts": [
+          4,
+          0,
+          0
+        ],
+        "evidence_state": "pass"
+      }
+    ],
+    "validation_issues": []
+  },
+  "final": {
+    "protocol_version": "0.1",
+    "group_id": "G-DEMO",
+    "canonical_branch": "main",
+    "canonical_commit": "0e9f60e547cc70b9da1233a50c6502c397ff8bd0",
+    "report_file": ".group/final/final_report.md",
+    "initiated_by": "P22",
+    "created_at": "2026-11-13T08:53:34.587214Z",
+    "status": "completed",
+    "known_limitations": [],
+    "human_confirmation": {
+      "candidate_id": "E-20261113T085328Z-P22-e6e12f071e",
+      "canonical_commit": "0e9f60e547cc70b9da1233a50c6502c397ff8bd0",
+      "report_sha256": "4bf5857eb1185daff60b276121c269d1bf286060ae1fd98c2c32905138db4d23",
+      "confirmed_by": "P22",
+      "kind": "simulation",
+      "confirmed_at": "2026-11-13T08:53:33.316584Z",
+      "statement": "Simulated test fixture confirmation; not a human observation."
+    },
+    "evidence_mode": "simulation"
+  },
+  "acceptance_steps": 15,
+  "fresh_session_recovery": true,
+  "command_count": 58,
+  "verification_branches": [
+    "main",
+    "people/P17/greeting",
+    "people/P22/work",
+    "people/P31/work"
+  ],
+  "paths": {
+    "output": "C:\\Users\\User\\Desktop\\大三上\\ai輔助\\HW1\\.synthesis-20261113\\final-local-demo-40e8d70",
+    "final_report": "C:\\Users\\User\\Desktop\\大三上\\ai輔助\\HW1\\.synthesis-20261113\\final-local-demo-40e8d70\\student-B\\.group\\final\\final_report.md",
+    "transcript": "C:\\Users\\User\\Desktop\\大三上\\ai輔助\\HW1\\.synthesis-20261113\\final-local-demo-40e8d70\\transcript.json"
+  }
+}

@@ -1,0 +1,7 @@
+test_event_mutation_introduced_only_in_merge_commit_is_rejected (test_synthesis_regressions.SynthesisRegressions.test_event_mutation_introduced_only_in_merge_commit_is_rejected) ... ok
+test_historical_diff_preserves_multi_commit_contribution_after_merge (test_synthesis_regressions.SynthesisRegressions.test_historical_diff_preserves_multi_commit_contribution_after_merge) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 22.249s
+
+OK

@@ -1,0 +1,380 @@
+[
+  {
+    "step": 1,
+    "name": "Three independent clones share one Git remote",
+    "result": "pass",
+    "evidence": [
+      "C:\\Users\\User\\Desktop\\大三上\\ai輔助\\HW1\\.synthesis-20261113\\final-github-demo-40e8d70\\student-A",
+      "C:\\Users\\User\\Desktop\\大三上\\ai輔助\\HW1\\.synthesis-20261113\\final-github-demo-40e8d70\\student-B",
+      "C:\\Users\\User\\Desktop\\大三上\\ai輔助\\HW1\\.synthesis-20261113\\final-github-demo-40e8d70\\student-C"
+    ]
+  },
+  {
+    "step": 2,
+    "name": "Each member has a separate personal branch",
+    "result": "pass",
+    "evidence": [
+      "people/SYN-20261113T085235-766544-P17/greeting",
+      "people/SYN-20261113T085235-766544-P22/work",
+      "people/SYN-20261113T085235-766544-P31/work"
+    ]
+  },
+  {
+    "step": 3,
+    "name": "A and B implement independent changes",
+    "result": "pass",
+    "evidence": [
+      "collaboration_fixture/greet.py            | 2 +-\n collaboration_fixture_tests/test_greet.py | 3 +++\n 2 files changed, 4 insertions(+), 1 deletion(-)",
+      "?? collaboration_fixture/numbers_lib.py\n?? collaboration_fixture_tests/test_numbers.py"
+    ]
+  },
+  {
+    "step": 4,
+    "name": "A publishes code and an immutable event",
+    "result": "pass",
+    "evidence": {
+      "protocol_version": "0.1",
+      "event_id": "E-20261113T085257Z-SYN-20261113T085235-766544-P17-725fa126e3",
+      "event_type": "change_published",
+      "group_id": "G-20261113T085235-766544",
+      "person_id": "SYN-20261113T085235-766544-P17",
+      "created_at": "2026-11-13T08:52:57.958783Z",
+      "related_events": [],
+      "change_id": "C-SYN-20261113T085235-766544-P17-f89923dba1",
+      "branch": "people/SYN-20261113T085235-766544-P17/greeting",
+      "commit": "330738acd41ed828727c023ae898fa9fbb8036e0",
+      "summary": "Trim surrounding name whitespace",
+      "files_changed": [
+        "collaboration_fixture/greet.py",
+        "collaboration_fixture_tests/test_greet.py"
+      ],
+      "interface_changes": [],
+      "tests_run": [
+        "[\"C:\\\\Program Files\\\\WindowsApps\\\\OpenAI.CodexPrimaryRuntime.v26-1111-570-0_26.1111.570.0_x64__3k8sg7r9htsxt\\\\dependencies\\\\python\\\\python.exe\", \"-m\", \"unittest\", \"discover\", \"-s\", \"collaboration_fixture_tests\", \"-v\"]"
+      ],
+      "known_issues": [],
+      "proposed_for_integration": true,
+      "validation": {
+        "automated_result": "pass",
+        "results": [
+          {
+            "argv": [
+              "C:\\Program Files\\WindowsApps\\OpenAI.CodexPrimaryRuntime.v26-1111-570-0_26.1111.570.0_x64__3k8sg7r9htsxt\\dependencies\\python\\python.exe",
+              "-m",
+              "unittest",
+              "discover",
+              "-s",
+              "collaboration_fixture_tests",
+              "-v"
+            ],
+            "exit_code": 0,
+            "stdout": "",
+            "stderr": "test_name (test_greet.GreetingTest.test_name) ... ok\ntest_trim (test_greet.GreetingTest.test_trim) ... ok\n\n----------------------------------------------------------------------\nRan 2 tests in 0.000s\n\nOK\n",
+            "counts": [
+              2,
+              0,
+              0
+            ],
+            "evidence_state": "pass"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "step": 5,
+    "name": "B discovers A through SYNC",
+    "result": "pass",
+    "evidence": [
+      "E-20261113T085257Z-SYN-20261113T085235-766544-P17-725fa126e3",
+      "E-20261113T085308Z-SYN-20261113T085235-766544-P22-e11fb820d2"
+    ]
+  },
+  {
+    "step": 6,
+    "name": "B reviews the actual diff without accepting by default",
+    "result": "pass",
+    "evidence": {
+      "protocol_version": "0.1",
+      "event_id": "E-20261113T085321Z-SYN-20261113T085235-766544-P22-ad023bdd31",
+      "event_type": "review",
+      "group_id": "G-20261113T085235-766544",
+      "person_id": "SYN-20261113T085235-766544-P22",
+      "created_at": "2026-11-13T08:53:21.253362Z",
+      "related_events": [
+        "E-20261113T085257Z-SYN-20261113T085235-766544-P17-725fa126e3"
+      ],
+      "change_id": "C-SYN-20261113T085235-766544-P17-f89923dba1",
+      "verdict": "accept",
+      "summary": "SIMULATED review: preserves name and normalizes whitespace.",
+      "issues": [],
+      "tests_run": [],
+      "inspected_commit": "330738acd41ed828727c023ae898fa9fbb8036e0",
+      "evidence": [
+        "Exact diff inspected; combined checks follow."
+      ]
+    }
+  },
+  {
+    "step": 7,
+    "name": "Git automatically merges a compatible case",
+    "result": "pass",
+    "evidence": true
+  },
+  {
+    "step": 8,
+    "name": "Tests and semantic review separately verify integration",
+    "result": "pass",
+    "evidence": {
+      "protocol_version": "0.1",
+      "event_id": "E-20261113T085330Z-SYN-20261113T085235-766544-P22-8773d887dd",
+      "event_type": "integration_result",
+      "group_id": "G-20261113T085235-766544",
+      "person_id": "SYN-20261113T085235-766544-P22",
+      "created_at": "2026-11-13T08:53:30.805044Z",
+      "related_events": [
+        "E-20261113T085257Z-SYN-20261113T085235-766544-P17-725fa126e3"
+      ],
+      "change_id": "C-SYN-20261113T085235-766544-P17-f89923dba1",
+      "target_branch": "people/SYN-20261113T085235-766544-P22/work",
+      "result": "success",
+      "merge_commit": "3a4dbe700e4ca10171c37351d9af9bd271ae748c",
+      "conflicts": [],
+      "conflict_resolution_summary": "No textual conflicts; preserve both greeting and arithmetic features",
+      "verification": {
+        "build": "not_applicable",
+        "tests": "pass",
+        "semantic_review": "pass"
+      },
+      "summary": "SIMULATED fixture assessment: greeting, whitespace and arithmetic intents inspected.",
+      "validation": {
+        "automated_result": "pass",
+        "results": [
+          {
+            "argv": [
+              "C:\\Program Files\\WindowsApps\\OpenAI.CodexPrimaryRuntime.v26-1111-570-0_26.1111.570.0_x64__3k8sg7r9htsxt\\dependencies\\python\\python.exe",
+              "-m",
+              "unittest",
+              "discover",
+              "-s",
+              "collaboration_fixture_tests",
+              "-v"
+            ],
+            "exit_code": 0,
+            "stdout": "",
+            "stderr": "test_name (test_greet.GreetingTest.test_name) ... ok\ntest_trim (test_greet.GreetingTest.test_trim) ... ok\ntest_negative (test_numbers.AdditionTest.test_negative) ... ok\ntest_positive (test_numbers.AdditionTest.test_positive) ... ok\n\n----------------------------------------------------------------------\nRan 4 tests in 0.000s\n\nOK\n",
+            "counts": [
+              4,
+              0,
+              0
+            ],
+            "evidence_state": "pass"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "step": 9,
+    "name": "Overlapping changes produce a genuine Git conflict",
+    "result": "pass",
+    "evidence": [
+      "collaboration_fixture/greet.py"
+    ]
+  },
+  {
+    "step": 10,
+    "name": "Known fixture conflict is resolved deliberately and verified",
+    "result": "pass",
+    "evidence": {
+      "protocol_version": "0.1",
+      "event_id": "E-20261113T085351Z-SYN-20261113T085235-766544-P22-286d049b3b",
+      "event_type": "integration_result",
+      "group_id": "G-20261113T085235-766544",
+      "person_id": "SYN-20261113T085235-766544-P22",
+      "created_at": "2026-11-13T08:53:51.874915Z",
+      "related_events": [
+        "E-20261113T085341Z-SYN-20261113T085235-766544-P31-f3e3167934"
+      ],
+      "change_id": "C-SYN-20261113T085235-766544-P31-2ee0c8629d",
+      "target_branch": "people/SYN-20261113T085235-766544-P22/work",
+      "result": "success",
+      "merge_commit": "af9712778f11a0653ad3fe356bbeb26af6aa1306",
+      "conflicts": [
+        "collaboration_fixture/greet.py"
+      ],
+      "conflict_resolution_summary": "SIMULATED fixture decision: preserve Welcome and whitespace normalization",
+      "verification": {
+        "build": "not_applicable",
+        "tests": "pass",
+        "semantic_review": "pass"
+      },
+      "summary": "SIMULATED fixture assessment: greeting, whitespace and arithmetic intents inspected.",
+      "validation": {
+        "automated_result": "pass",
+        "results": [
+          {
+            "argv": [
+              "C:\\Program Files\\WindowsApps\\OpenAI.CodexPrimaryRuntime.v26-1111-570-0_26.1111.570.0_x64__3k8sg7r9htsxt\\dependencies\\python\\python.exe",
+              "-m",
+              "unittest",
+              "discover",
+              "-s",
+              "collaboration_fixture_tests",
+              "-v"
+            ],
+            "exit_code": 0,
+            "stdout": "",
+            "stderr": "test_name (test_greet.GreetingTest.test_name) ... ok\ntest_trim (test_greet.GreetingTest.test_trim) ... ok\ntest_negative (test_numbers.AdditionTest.test_negative) ... ok\ntest_positive (test_numbers.AdditionTest.test_positive) ... ok\n\n----------------------------------------------------------------------\nRan 4 tests in 0.000s\n\nOK\n",
+            "counts": [
+              4,
+              0,
+              0
+            ],
+            "evidence_state": "pass"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "step": 11,
+    "name": "Combined software passes TEST in an isolated worktree",
+    "result": "pass",
+    "evidence": {
+      "protocol_version": "0.1",
+      "event_id": "E-20261113T085359Z-SYN-20261113T085235-766544-P22-943ab7b35a",
+      "event_type": "test_result",
+      "group_id": "G-20261113T085235-766544",
+      "person_id": "SYN-20261113T085235-766544-P22",
+      "created_at": "2026-11-13T08:53:59.377036Z",
+      "related_events": [],
+      "scope": "current",
+      "commit": "bc46f9617dfa287edc505297daaa079b134bd908",
+      "commands": [
+        "[\"C:\\\\Program Files\\\\WindowsApps\\\\OpenAI.CodexPrimaryRuntime.v26-1111-570-0_26.1111.570.0_x64__3k8sg7r9htsxt\\\\dependencies\\\\python\\\\python.exe\", \"-m\", \"unittest\", \"discover\", \"-s\", \"collaboration_fixture_tests\", \"-v\"]"
+      ],
+      "automated_result": "pass",
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "human_checks_required": [],
+      "summary": "Automated validation: pass",
+      "command_results": [
+        {
+          "argv": [
+            "C:\\Program Files\\WindowsApps\\OpenAI.CodexPrimaryRuntime.v26-1111-570-0_26.1111.570.0_x64__3k8sg7r9htsxt\\dependencies\\python\\python.exe",
+            "-m",
+            "unittest",
+            "discover",
+            "-s",
+            "collaboration_fixture_tests",
+            "-v"
+          ],
+          "exit_code": 0,
+          "stdout": "",
+          "stderr": "test_name (test_greet.GreetingTest.test_name) ... ok\ntest_trim (test_greet.GreetingTest.test_trim) ... ok\ntest_negative (test_numbers.AdditionTest.test_negative) ... ok\ntest_positive (test_numbers.AdditionTest.test_positive) ... ok\n\n----------------------------------------------------------------------\nRan 4 tests in 0.000s\n\nOK\n",
+          "counts": [
+            4,
+            0,
+            0
+          ],
+          "evidence_state": "pass"
+        }
+      ],
+      "validation_issues": []
+    }
+  },
+  {
+    "step": 12,
+    "name": "C independently discovers published test evidence",
+    "result": "pass",
+    "evidence": "E-20261113T085359Z-SYN-20261113T085235-766544-P22-943ab7b35a"
+  },
+  {
+    "step": 13,
+    "name": "Verified contributions reach canonical state",
+    "result": "pass",
+    "evidence": "f49da3a6a8b42cccef9dd490f45a828b0a949c9c"
+  },
+  {
+    "step": 14,
+    "name": "A recognized member prepares a concrete final candidate",
+    "result": "pass",
+    "evidence": {
+      "candidate_id": "E-20261113T085431Z-SYN-20261113T085235-766544-P22-c59eed7873",
+      "canonical_commit": "f49da3a6a8b42cccef9dd490f45a828b0a949c9c",
+      "candidate_report": "# Group Final Report\n\n> SIMULATION ONLY: decisions and confirmation are fixtures, not real human feedback.\n\n\n## Assignment\n# Example group assignment\nBuild a small greeting and arithmetic library. Greetings include the supplied name.\nSurrounding name whitespace should be ignored. Addition should support positive and negative integers.\n\n\n## Result\nGreeting normalization, welcoming text and tested arithmetic\n\n## Canonical Commit\nf49da3a6a8b42cccef9dd490f45a828b0a949c9c\n\n## Important Changes\n- C-SYN-20261113T085235-766544-P17-f89923dba1: Trim surrounding name whitespace (SYN-20261113T085235-766544-P17)\n- C-SYN-20261113T085235-766544-P22-0a53358a49: Add arithmetic helper and positive/negative tests (SYN-20261113T085235-766544-P22)\n- C-SYN-20261113T085235-766544-P31-2ee0c8629d: Use a welcoming greeting (SYN-20261113T085235-766544-P31)\n\n## Validation\nAutomated checks passed. Evidence: E-20261113T085426Z-SYN-20261113T085235-766544-P22-999988b627.\n- [\"C:\\\\Program Files\\\\WindowsApps\\\\OpenAI.CodexPrimaryRuntime.v26-1111-570-0_26.1111.570.0_x64__3k8sg7r9htsxt\\\\dependencies\\\\python\\\\python.exe\", \"-m\", \"unittest\", \"discover\", \"-s\", \"collaboration_fixture_tests\", \"-v\"]\n- Review E-20261113T085321Z-SYN-20261113T085235-766544-P22-ad023bdd31: accept — SIMULATED review: preserves name and normalizes whitespace.\n\n## Known Limitations\nNone reported.\n\n## Unincorporated Changes\n\n## Contributors\n- SYN-20261113T085235-766544-P17\n- SYN-20261113T085235-766544-P22\n- SYN-20261113T085235-766544-P31\n",
+      "next": "Show this report to the human. Only after explicit confirmation run final-publish --confirm."
+    }
+  },
+  {
+    "step": 15,
+    "name": "Simulated confirmation yields one recoverable group result",
+    "result": "pass",
+    "evidence": {
+      "published": true,
+      "final": {
+        "protocol_version": "0.1",
+        "group_id": "G-20261113T085235-766544",
+        "canonical_branch": "synthesis/verification/20261113T085235-766544",
+        "canonical_commit": "f49da3a6a8b42cccef9dd490f45a828b0a949c9c",
+        "report_file": ".group/final/final_report.md",
+        "initiated_by": "SYN-20261113T085235-766544-P22",
+        "created_at": "2026-11-13T08:54:42.514951Z",
+        "status": "completed",
+        "known_limitations": [],
+        "human_confirmation": {
+          "candidate_id": "E-20261113T085431Z-SYN-20261113T085235-766544-P22-c59eed7873",
+          "canonical_commit": "f49da3a6a8b42cccef9dd490f45a828b0a949c9c",
+          "report_sha256": "61aacc8174d2f27f20bdd77233211f3542687737a16992a7144b1bbc8829d630",
+          "confirmed_by": "SYN-20261113T085235-766544-P22",
+          "kind": "simulation",
+          "confirmed_at": "2026-11-13T08:54:40.356122Z",
+          "statement": "Simulated test fixture confirmation; not a human observation."
+        },
+        "evidence_mode": "simulation"
+      },
+      "event": {
+        "protocol_version": "0.1",
+        "event_id": "E-20261113T085442Z-SYN-20261113T085235-766544-P22-4bef0a23a7",
+        "event_type": "final_result",
+        "group_id": "G-20261113T085235-766544",
+        "person_id": "SYN-20261113T085235-766544-P22",
+        "created_at": "2026-11-13T08:54:42.515954Z",
+        "related_events": [
+          "E-20261113T085431Z-SYN-20261113T085235-766544-P22-c59eed7873"
+        ],
+        "canonical_commit": "f49da3a6a8b42cccef9dd490f45a828b0a949c9c",
+        "final_report_path": ".group/final/final_report.md",
+        "test_evidence": [
+          "E-20261113T085426Z-SYN-20261113T085235-766544-P22-999988b627"
+        ],
+        "known_limitations": [],
+        "initiated_by": "SYN-20261113T085235-766544-P22",
+        "human_confirmation": {
+          "candidate_id": "E-20261113T085431Z-SYN-20261113T085235-766544-P22-c59eed7873",
+          "canonical_commit": "f49da3a6a8b42cccef9dd490f45a828b0a949c9c",
+          "report_sha256": "61aacc8174d2f27f20bdd77233211f3542687737a16992a7144b1bbc8829d630",
+          "confirmed_by": "SYN-20261113T085235-766544-P22",
+          "kind": "simulation",
+          "confirmed_at": "2026-11-13T08:54:40.356122Z",
+          "statement": "Simulated test fixture confirmation; not a human observation."
+        },
+        "evidence_mode": "simulation",
+        "validated_events": [
+          "E-20261113T085257Z-SYN-20261113T085235-766544-P17-725fa126e3",
+          "E-20261113T085308Z-SYN-20261113T085235-766544-P22-e11fb820d2",
+          "E-20261113T085321Z-SYN-20261113T085235-766544-P22-ad023bdd31",
+          "E-20261113T085330Z-SYN-20261113T085235-766544-P22-8773d887dd",
+          "E-20261113T085341Z-SYN-20261113T085235-766544-P31-f3e3167934",
+          "E-20261113T085351Z-SYN-20261113T085235-766544-P22-286d049b3b",
+          "E-20261113T085359Z-SYN-20261113T085235-766544-P22-943ab7b35a",
+          "E-20261113T085416Z-SYN-20261113T085235-766544-P31-41dfeb7643",
+          "E-20261113T085426Z-SYN-20261113T085235-766544-P22-999988b627",
+          "E-20261113T085431Z-SYN-20261113T085235-766544-P22-c59eed7873"
+        ]
+      }
+    }
+  }
+]

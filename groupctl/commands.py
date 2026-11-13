@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-import hashlib
 import json
 import re
-import sys
-import tempfile
 import uuid
 from pathlib import Path
 
 from .core import GroupError, Repository, identifier, now, read_json, write_json
+from .validation import validate_commands
 
 
 def repo(args):
@@ -24,12 +22,12 @@ def init(args):
     r.git("check-ref-format", "--branch", args.canonical)
     assignment = Path(args.assignment).read_text(encoding="utf-8-sig")
     checks = read_json(args.checks_file) if args.checks_file else []
-    if not isinstance(checks, list) or not all(isinstance(c, list) and c and
-            all(isinstance(v, str) and v for v in c) for c in checks):
-        raise GroupError("Checks file must contain a list of command argument arrays")
+    validate_commands(checks)
     config = {"protocol_version": "0.1", "group_id": args.group,
               "canonical_branch": args.canonical, "assignment_file": ".group/assignment/assignment.md",
               "remote": "origin", "validation_commands": checks}
+    if getattr(args, "simulation", False):
+        config["simulation"] = True
     write_json(r.meta / "group.json", config)
     (r.meta / "assignment").mkdir()
     (r.meta / "assignment/assignment.md").write_text(assignment, encoding="utf-8")
@@ -43,7 +41,7 @@ def init(args):
         "protocol_version": "0.1", "person_id": args.person, "display_name": args.name, "joined_at": now()})
     return {"group_id": args.group, "person_id": args.person,
             "next": "Commit .group setup, push canonical branch, then create your personal branch. "
-                    "Commands: git add .group; git commit; git push -u origin main; "
+                    f"Commands: git add .group; git commit; git push -u origin {args.canonical}; "
                     f"git switch -c people/{args.person}/work"}
 
 
@@ -77,42 +75,8 @@ def identity(args):
     return {"person_id": r.identity()}
 
 
-def state(r, events):
-    sync_path = r.local / "sync.json"
-    seen = set(read_json(sync_path).get("seen", [])) if sync_path.exists() else set()
-    counts = r.output("rev-list", "--left-right", "--count", f"HEAD...{r.canonical}").split()
-    return {"person_id": r.identity(), "group_id": r.config["group_id"], "branch": r.branch,
-            "commit": r.head, "uncommitted": r.output("status", "--porcelain").splitlines(),
-            "canonical_branch": r.config["canonical_branch"], "canonical_commit": r.output("rev-parse", r.canonical),
-            "ahead": int(counts[0]), "behind": int(counts[1]),
-            "new_events": [e for e in events if e["event_id"] not in seen],
-            "published_local_changes": [e for e in events if e["event_type"] == "change_published"
-                                        and e["person_id"] == r.identity()],
-            "latest_test": next((e for e in reversed(events) if e["event_type"] == "test_result"), None),
-            "blockers": unresolved_blockers(events),
-            "recommended_next_action": "Inspect relevant new events and actual diffs before integrating."}
-
-
-def unresolved_blockers(events):
-    resolved = {event_id for e in events for event_id in e.get("resolves_events", [])}
-    return [e for e in events if e["event_type"] == "blocker" and e["event_id"] not in resolved]
-
-
-def final_concerns(r, events, commit):
-    incorporated = {e["change_id"] for e in events if e["event_type"] == "change_published"
-                    and r.ancestor(e["commit"], commit)}
-    resolved = {event_id for e in events for event_id in e.get("resolves_events", [])}
-    latest_reviews, latest_integrations = {}, {}
-    for event in events:
-        if event.get("change_id") not in incorporated:
-            continue
-        if event["event_type"] == "review":
-            latest_reviews[event["change_id"]] = event
-        if event["event_type"] == "integration_result" and r.ancestor(event["merge_commit"], commit):
-            latest_integrations[event["change_id"]] = event
-    concerns = [e for e in latest_reviews.values() if e["verdict"] != "accept"]
-    concerns += [e for e in latest_integrations.values() if e["result"] != "success"]
-    return [e["event_id"] for e in concerns if e["event_id"] not in resolved]
+from .status import state
+from .policy import unresolved_blockers, final_concerns
 
 
 def status(args):
@@ -129,10 +93,15 @@ def sync(args):
     result = state(r, events)
     if args.update:
         r.clean()
-        r.git("merge", "--no-edit", r.canonical)
+        merged = r.git("merge", "--no-edit", r.canonical, ok=(0, 1))
+        if merged.returncode:
+            result["conflicts"] = r.output("diff", "--name-only", "--diff-filter=U").splitlines()
+            result["needs_human"] = True
+            result["next"] = "Resolve the canonical merge deliberately, or git merge --abort. Local work was not discarded."
+            return result
         result["incorporated_canonical"] = r.head != before["commit"]
         if r.head != before["commit"]:
-            result["validation"] = r.checks()
+            result["validation"] = r.check_commit(r.head)
     else:
         result["incorporated_canonical"] = False
     write_json(r.local / "sync.json", {"seen": [e["event_id"] for e in events], "at": now()})
@@ -151,6 +120,8 @@ def event_command(args):
     r = repo(args)
     r.clean()
     fields = read_json(args.file)
+    if not isinstance(fields, dict):
+        raise GroupError("Event payload must be a JSON object")
     if args.type in {"change_published", "review", "test_result", "integration_result", "final_candidate", "final_result"}:
         raise GroupError("Use the dedicated command for changes, reviews, tests, integrations and finalization")
     event = r.event(args.type, fields, args.related)
@@ -188,7 +159,9 @@ def pub(args):
     if not source_paths:
         raise GroupError("No contribution relative to canonical state")
     check_source_files(r, source_paths)
-    checks = r.checks()
+    snapshot = r.snapshot(paths) if paths else r.head
+    original = {name: r.path(name).read_bytes() if r.path(name).is_file() else None for name in paths}
+    checks = r.check_commit(snapshot)
     if checks["automated_result"] != "pass" and not (checks["automated_result"] == "not_available" and args.unverified_reason):
         raise GroupError("PUB requires passing checks (or an explicit reason when no automated checks exist): " + json.dumps(checks))
     # Reinspect test-created files before staging; don't silently add generated outputs.
@@ -196,6 +169,9 @@ def pub(args):
     after.update(filter(None, r.git("ls-files", "--others", "--exclude-standard", "-z").stdout.split("\0")))
     if after != set(paths):
         raise GroupError("Validation changed repository files; inspect these before PUB")
+    if any((r.path(name).read_bytes() if r.path(name).is_file() else None) != content
+           for name, content in original.items()):
+        raise GroupError("Working files changed during validation. Inspect and retry PUB.")
     if paths:
         r.git("add", "--", *paths)
         r.git("commit", "-m", args.summary, "--", *paths)
@@ -204,7 +180,7 @@ def pub(args):
     r.git("push", "-u", r.remote, f"HEAD:refs/heads/{r.branch}")
     change_id = f"C-{r.identity()}-{uuid.uuid4().hex[:10]}"
     event = r.event("change_published", {"change_id": change_id, "branch": r.branch, "commit": commit,
-        "summary": args.summary, "files_changed": source_paths, "interface_changes": args.interface_change,
+        "summary": args.summary, "base_commit": base, "files_changed": source_paths, "interface_changes": args.interface_change,
         "tests_run": [json.dumps(x["argv"]) for x in checks["results"]],
         "known_issues": args.known_issue + ([args.unverified_reason] if args.unverified_reason else []),
         "proposed_for_integration": not args.draft, "validation": checks})
@@ -215,9 +191,26 @@ def inspect(args):
     r = repo(args)
     r.fetch()
     change = r.change(args.change)
-    base = r.output("merge-base", change["commit"], r.canonical)
-    return {"event": change, "base": base,
-            "diff": r.git("diff", base, change["commit"], "--", ".", ":(exclude).group").stdout,
+    recorded = change.get("base_commit")
+    warning = None
+    if recorded is not None:
+        if not isinstance(recorded, str) or not re.fullmatch(r"[0-9a-f]{40}|[0-9a-f]{64}", recorded):
+            raise GroupError("Published base_commit must be an exact commit hash")
+        if recorded == change["commit"] or not r.ancestor(recorded, change["commit"]):
+            raise GroupError("Published base_commit must precede the published change")
+        base, source = recorded, "published_base"
+    else:
+        base = r.output("merge-base", change["commit"], r.canonical)
+        source = "legacy_merge_base"
+        if base == change["commit"]:
+            parents = r.output("rev-list", "--parents", "-n", "1", change["commit"]).split()[1:]
+            base = parents[0] if parents else None
+            source = "legacy_first_parent" if parents else "legacy_root"
+            warning = "Legacy event has no recorded base_commit; this diff may cover only its last commit. Inspect Git history for the full contribution."
+    diff = (r.git("diff", base, change["commit"], "--", ".", ":(exclude).group").stdout if base else
+            r.git("show", "--format=", "--root", change["commit"], "--", ".", ":(exclude).group").stdout)
+    return {"event": change, "base": base, "diff_base_source": source, "warning": warning,
+            "diff": diff,
             "already_incorporated": r.ancestor(change["commit"])}
 
 
@@ -227,7 +220,9 @@ def review(args):
     r.fetch()
     change = r.change(args.change)
     assessment = read_json(args.file)
-    if assessment.get("inspected_commit") != change["commit"] or not assessment.get("diff_inspected"):
+    if not isinstance(assessment, dict):
+        raise GroupError("Review assessment must be a JSON object")
+    if assessment.get("inspected_commit") != change["commit"] or assessment.get("diff_inspected") is not True:
         raise GroupError("Review must identify inspected_commit and diff_inspected=true after actual inspection")
     event = r.event("review", {"change_id": args.change, "verdict": assessment.get("verdict"),
         "summary": assessment.get("summary"), "issues": assessment.get("issues"),
@@ -247,20 +242,8 @@ def test(args):
         commit = r.output("rev-parse", r.canonical)
     else:
         commit = r.change(scope)["commit"]
-    if commit == r.head:
-        checks = r.checks()
-        r.clean()
-    else:
-        # Use a disposable worktree; never switch/discard the student's current work.
-        with tempfile.TemporaryDirectory(prefix="groupctl-test-") as directory:
-            target = Path(directory).resolve() / "checkout"
-            r.git("worktree", "add", "--detach", str(target), commit)
-            try:
-                checks = Repository(target).checks()
-                Repository(target).clean()
-            finally:
-                if target.parent == Path(directory).resolve():
-                    r.git("worktree", "remove", "--force", str(target))
+    checks = r.check_commit(commit)
+    r.clean()
     event = r.test_event(scope, commit, checks, args.human_check)
     return {"published": True, "event": r.publish(event)}
 
@@ -304,12 +287,14 @@ def integrate_finish(args):
     if markers.returncode == 0:
         raise GroupError("Possible conflict markers remain: " + markers.stdout)
     assessment = read_json(args.file)
+    if not isinstance(assessment, dict):
+        raise GroupError("Semantic assessment must be a JSON object")
     if assessment.get("reviewed_commit") != r.head or assessment.get("semantic_review") not in {"pass", "fail"} or not assessment.get("summary"):
         raise GroupError("Assessment needs exact reviewed_commit, semantic_review=pass/fail and summary")
-    checks = r.checks()
+    checks = r.check_commit(r.head)
     r.clean()
     result = "success" if checks["automated_result"] == "pass" and assessment["semantic_review"] == "pass" else "failed"
-    if checks["automated_result"] in {"not_available", "partial"}:
+    if checks["automated_result"] in {"not_available", "partial"} and assessment["semantic_review"] == "pass":
         result = "needs_human"
     event = r.event("integration_result", {"change_id": saved["change_id"], "target_branch": r.branch,
         "result": result, "merge_commit": r.head, "conflicts": saved["conflicts"],
@@ -341,119 +326,4 @@ def integrate_abort(args):
     return {"aborted": True, "commit": r.head}
 
 
-def canonical_ready(r):
-    r.clean()
-    r.fetch()
-    if r.branch != r.config["canonical_branch"] or r.head != r.output("rev-parse", r.canonical):
-        raise GroupError("FINAL must run on a clean, up-to-date canonical branch")
-    r.identity()
-
-
-def final_prepare(args):
-    r = repo(args)
-    canonical_ready(r)
-    commit = r.head
-    events = r.events()
-    pending = [e for e in events if e["event_type"] == "change_published" and
-               not r.ancestor(e["commit"], commit)]
-    dispositions = read_json(args.dispositions) if args.dispositions else {}
-    if not isinstance(dispositions, dict):
-        raise GroupError("Dispositions must map change IDs to explicit rejection/obsolete explanations")
-    unknown = [e["change_id"] for e in pending if not isinstance(dispositions.get(e["change_id"]), str)
-               or not dispositions[e["change_id"]].strip()]
-    if unknown:
-        raise GroupError("Unincorporated changes need integration or explicit disposition: " + ", ".join(unknown))
-    unresolved_reviews = final_concerns(r, events, commit)
-    if unresolved_reviews:
-        raise GroupError("Incorporated changes have unresolved review concerns. Address and re-review: "
-                         + ", ".join(unresolved_reviews))
-    blockers = unresolved_blockers(events)
-    if blockers:
-        raise GroupError("Resolve and record blockers before finalization: " + ", ".join(e["event_id"] for e in blockers))
-    if args.human_check and not args.human_evidence:
-        raise GroupError("Provide concrete human-check results using --human-evidence")
-    checks = r.checks()
-    r.clean()
-    if checks["automated_result"] != "pass":
-        # Failed final validation is shared evidence, never a successful final result.
-        event = r.test_event("canonical_final", commit, checks, args.human_check)
-        r.publish(event)
-        raise GroupError("Final checks did not pass. Test evidence published; no final result created.")
-    test_event = r.publish(r.test_event("canonical_final", commit, checks))
-    lines = ["# Group Final Report", "", "## Assignment", r.path(r.config["assignment_file"]).read_text(encoding="utf-8"),
-             "", "## Result", args.result, "", "## Canonical Commit", commit,
-             "", "## Important Changes"]
-    lines += [f"- {e['change_id']}: {e['summary']} ({e['person_id']})" for e in events
-              if e["event_type"] == "change_published" and r.ancestor(e["commit"], commit)]
-    lines += ["", "## Validation", f"Automated checks passed. Evidence: {test_event['event_id']}."]
-    lines += ["- " + json.dumps(result["argv"], ensure_ascii=False) for result in checks["results"]]
-    lines += [f"- Review {e['event_id']}: {e['verdict']} — {e['summary']}" for e in events if e["event_type"] == "review"]
-    lines += ["- Human evidence: " + evidence for evidence in args.human_evidence]
-    lines += ["", "## Known Limitations", *(args.limitation or ["None reported."]),
-              "", "## Unincorporated Changes", *(f"- {e['change_id']}: {dispositions[e['change_id']]}" for e in pending),
-              "", "## Contributors"]
-    people = {e["person_id"] for e in events if e["event_type"] == "change_published" and r.ancestor(e["commit"], commit)}
-    lines += [f"- {person}" for person in sorted(people)]
-    text = "\n".join(lines) + "\n"
-    candidate = r.meta / "final/candidate.md"
-    candidate.parent.mkdir(exist_ok=True)
-    candidate.write_text(text, encoding="utf-8")
-    event = r.event("final_candidate", {"canonical_commit": commit,
-        "candidate_report_path": ".group/final/candidate.md", "test_evidence": [test_event["event_id"]],
-        "known_issues": args.limitation, "report_sha256": hashlib.sha256(text.encode()).hexdigest(),
-        "dispositions": dispositions, "human_evidence": args.human_evidence}, [test_event["event_id"]])
-    r.publish(event, [".group/final/candidate.md"])
-    return {"candidate_id": event["event_id"], "canonical_commit": commit, "candidate_report": text,
-            "next": "Show this report to the human. Only after explicit confirmation run final-publish --confirm."}
-
-
-def final_publish(args):
-    r = repo(args)
-    if not args.confirm:
-        raise GroupError("Human confirmation is required after reviewing the concrete candidate")
-    canonical_ready(r)
-    events = r.events()
-    matches = [e for e in events if e["event_id"] == args.candidate and e["event_type"] == "final_candidate"]
-    if len(matches) != 1:
-        raise GroupError("Public final candidate not found")
-    candidate = matches[0]
-    commit = candidate["canonical_commit"]
-    if not r.ancestor(commit):
-        raise GroupError("Candidate canonical commit is no longer an ancestor")
-    changed = r.output("diff", "--name-only", commit, "HEAD").splitlines()
-    if any(not p.startswith((".group/events/", ".group/final/")) for p in changed):
-        raise GroupError("Canonical code/configuration changed; prepare and validate a new candidate")
-    latest = next((e for e in reversed(events) if e["event_type"] == "final_candidate"), None)
-    if not latest or latest["event_id"] != args.candidate:
-        raise GroupError("A newer final candidate exists; inspect it first")
-    if unresolved_blockers(events):
-        raise GroupError("A blocker prevents final publication")
-    for evidence_id in candidate["test_evidence"]:
-        evidence = next((e for e in events if e["event_id"] == evidence_id), None)
-        if not evidence or evidence["event_type"] != "test_result" or evidence["commit"] != commit or evidence["automated_result"] != "pass":
-            raise GroupError("Candidate lacks passing test evidence for its exact canonical commit")
-    latest_exact_test = next((e for e in reversed(events) if e["event_type"] == "test_result"
-                              and e["commit"] == commit), None)
-    if latest_exact_test and latest_exact_test["automated_result"] != "pass":
-        raise GroupError("Latest test evidence no longer passes; investigate and prepare a new candidate")
-    if final_concerns(r, events, commit):
-        raise GroupError("Unresolved review concerns prevent final publication")
-    pending = [e for e in events if e["event_type"] == "change_published" and not r.ancestor(e["commit"], commit)
-               and e["change_id"] not in candidate.get("dispositions", {})]
-    if pending:
-        raise GroupError("New unincorporated work exists; prepare a new candidate")
-    text = (r.meta / "final/candidate.md").read_text(encoding="utf-8")
-    if hashlib.sha256(text.encode()).hexdigest() != candidate["report_sha256"]:
-        raise GroupError("Candidate report changed; prepare it again")
-    (r.meta / "final/final_report.md").write_text(text, encoding="utf-8")
-    envelope = {"protocol_version": "0.1", "group_id": r.config["group_id"],
-                "canonical_branch": r.config["canonical_branch"], "canonical_commit": commit,
-                "report_file": ".group/final/final_report.md", "initiated_by": r.identity(),
-                "created_at": now(), "status": "completed_with_known_limitations" if candidate["known_issues"] else "completed",
-                "known_limitations": candidate["known_issues"]}
-    write_json(r.meta / "final/final.json", envelope)
-    event = r.event("final_result", {"canonical_commit": commit, "final_report_path": envelope["report_file"],
-        "test_evidence": candidate["test_evidence"], "known_limitations": candidate["known_issues"],
-        "initiated_by": r.identity()}, [candidate["event_id"]])
-    r.publish(event, [".group/final/final_report.md", ".group/final/final.json"])
-    return {"published": True, "final": envelope, "event": event}
+from .finalization import final_prepare, final_publish

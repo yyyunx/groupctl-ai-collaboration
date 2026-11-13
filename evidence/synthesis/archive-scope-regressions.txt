@@ -1,0 +1,7 @@
+test_fresh_clone_recovers_archived_events_without_private_cache (test_synthesis_regressions.SynthesisRegressions.test_fresh_clone_recovers_archived_events_without_private_cache) ... ok
+test_other_group_verification_branches_do_not_mix_event_graphs (test_synthesis_regressions.SynthesisRegressions.test_other_group_verification_branches_do_not_mix_event_graphs) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 20.061s
+
+OK

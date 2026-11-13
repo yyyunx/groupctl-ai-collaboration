@@ -1,0 +1,15 @@
+test_generate_event_id_format (test_groupctl.TestGroupctlContract.test_generate_event_id_format) ... ok
+test_immutable_event_file_cannot_be_overwritten (test_groupctl.TestGroupctlContract.test_immutable_event_file_cannot_be_overwritten) ... ok
+test_next_change_id_increment (test_groupctl.TestGroupctlContract.test_next_change_id_increment) ... ok
+test_reject_invalid_review_verdict (test_groupctl.TestGroupctlContract.test_reject_invalid_review_verdict) ... ok
+test_validate_all_supported_events (test_groupctl.TestGroupctlContract.test_validate_all_supported_events) ... ok
+test_basic_heading_and_items (test_parser.TestParser.test_basic_heading_and_items) ... ok
+test_nested_section_parsing (test_parser.TestParser.test_nested_section_parsing) ... ok
+test_combined_end_column_and_style_class (test_renderer.TestRenderer.test_combined_end_column_and_style_class) ... ok
+test_render_nested_section (test_renderer.TestRenderer.test_render_nested_section) ... ok
+test_render_parse_result (test_renderer.TestRenderer.test_render_parse_result) ... ok
+
+----------------------------------------------------------------------
+Ran 10 tests in 0.009s
+
+OK

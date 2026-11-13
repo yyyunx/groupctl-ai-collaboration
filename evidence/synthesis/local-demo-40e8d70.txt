@@ -1,0 +1,16 @@
+[1/15] Three independent clones share one Git remote
+[2/15] Each member has a separate personal branch
+[3/15] A and B implement independent changes
+[4/15] A publishes code and an immutable event
+[5/15] B discovers A through SYNC
+[6/15] B reviews the actual diff without accepting by default
+[7/15] Git automatically merges a compatible case
+[8/15] Tests and semantic review separately verify integration
+[9/15] Overlapping changes produce a genuine Git conflict
+[10/15] Known fixture conflict is resolved deliberately and verified
+[11/15] Combined software passes TEST in an isolated worktree
+[12/15] C independently discovers published test evidence
+[13/15] Verified contributions reach canonical state
+[14/15] A recognized member prepares a concrete final candidate
+[15/15] Simulated confirmation yields one recoverable group result
+Evidence: C:\Users\User\Desktop\大三上\ai輔助\HW1\.synthesis-20261113\final-local-demo-40e8d70\summary.json

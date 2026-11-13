@@ -1,0 +1,6 @@
+test_new_blocker_arriving_during_confirmation_prevents_publication (test_synthesis_regressions.SynthesisRegressions.test_new_blocker_arriving_during_confirmation_prevents_publication) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 11.920s
+
+OK

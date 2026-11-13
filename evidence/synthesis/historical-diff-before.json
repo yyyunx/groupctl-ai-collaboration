@@ -1,0 +1,11 @@
+{
+  "code_commit": "40e8d70841ece01dac8892abf447b476cb068020",
+  "already_incorporated": true,
+  "declared_files": [
+    "greet.py",
+    "tests/test_greet.py"
+  ],
+  "actual_diff_length": 0,
+  "base": "dbfdb59fb0285ffd0ba03b3682ec1d271250077e",
+  "change_commit": "dbfdb59fb0285ffd0ba03b3682ec1d271250077e"
+}

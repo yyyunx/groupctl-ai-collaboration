@@ -1,0 +1,8 @@
+test_event_format (test_event_contract.TestEventContract.test_event_format) ... ok
+test_event_references (test_event_contract.TestEventContract.test_event_references) ... ok
+test_events_exist (test_event_contract.TestEventContract.test_events_exist) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.134s
+
+OK
