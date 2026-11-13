@@ -90,6 +90,15 @@ class ContextInboxCommunicationTests(GitFixture):
                 self.assertEqual(json.loads(output.stdout)["person_id"], "P17")
             else:
                 self.assertTrue(output.stdout.startswith("# Agent Context Pack"))
+        # A read-only handoff succeeds while reporting failed evidence honestly.
+        (self.a / "greet.py").write_text('def greet(name):\n    return "wrong"\n', encoding="utf-8")
+        git(self.a, "add", "greet.py")
+        git(self.a, "commit", "-m", "Failing validation context fixture")
+        call(self.a, "test", scope="current", human_check=[])
+        output = subprocess.run([sys.executable, "-m", "groupctl", "--repo", str(self.a), "context", "--offline",
+                                 "--format", "json"], cwd=ROOT, capture_output=True, text=True, encoding="utf-8")
+        self.assertEqual(output.returncode, 0, output.stderr)
+        self.assertEqual(json.loads(output.stdout)["validation"]["automated_result"], "fail")
 
     def test_inbox_read_state_is_local_per_member_and_does_not_touch_index(self):
         question = talk(self.a, "ask", text="Need a schema decision")["event"]

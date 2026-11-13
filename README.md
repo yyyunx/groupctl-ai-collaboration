@@ -23,7 +23,7 @@
 git clone https://github.com/yyyunx/groupctl-ai-collaboration.git
 cd groupctl-ai-collaboration
 .\run.ps1 --help
-.\run.ps1 demo
+.\run.ps1 --version
 ```
 
 Windows 啟動器會尋找 Python 或 py launcher；也可指定：

@@ -158,7 +158,7 @@ def main():
             return 2
         if event.get("automated_result") in {"fail", "partial", "not_available"} or event.get("result") in {"failed", "needs_human"}:
             return 2
-        if result.get("validation", {}).get("automated_result") in {"fail", "partial", "not_available"}:
+        if args.command != "context" and (result.get("validation") or {}).get("automated_result") in {"fail", "partial", "not_available"}:
             return 2
         return 0
     except GroupError as exc:
