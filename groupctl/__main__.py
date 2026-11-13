@@ -7,6 +7,9 @@ from . import commands
 from .core import GroupError
 from .status import render_status
 from . import __version__
+from . import collaboration, communication
+from .presentation import safe
+from .events import EVENT_FIELDS
 
 
 def parser():
@@ -76,6 +79,39 @@ def parser():
     sub.add_argument("candidate")
     sub.add_argument("--confirm", action="store_true")
     sub.add_argument("--confirmation-file", help="Candidate-bound human attestation JSON; required for real noninteractive finalization")
+    sub = command("context", collaboration.context, "Bounded, redacted context for any local AI agent")
+    sub.add_argument("--format", choices=("markdown", "json"), default="markdown")
+    sub.add_argument("--max-chars", type=int, default=12000)
+    sub.add_argument("--offline", action="store_true")
+    sub = command("inbox", collaboration.inbox, "Collaboration events and actionable attention items")
+    sub.add_argument("--format", choices=("text", "json"), default="text")
+    sub.add_argument("--offline", action="store_true")
+    sub.add_argument("--type", action="append", choices=tuple(EVENT_FIELDS), default=[])
+    sub.add_argument("--person")
+    sub.add_argument("--change")
+    sub.add_argument("--relevant", action="store_true")
+    sub.add_argument("--limit", type=int, default=20)
+    sub.add_argument("--mark-read", action="append", default=[])
+    sub.add_argument("--mark-all-read", action="store_true")
+    for name in ("ask", "answer", "block", "resolve"):
+        sub = command(name, communication.publish_communication, "Publish a protocol 0.1 communication without a JSON input file")
+        if name in ("ask", "answer"):
+            sub.add_argument("--text", required=True)
+        if name == "answer":
+            sub.add_argument("question")
+        if name == "block":
+            sub.add_argument("--summary", required=True)
+            sub.add_argument("--action", required=True)
+        if name in ("ask", "block"):
+            sub.add_argument("--change")
+        if name == "resolve":
+            sub.add_argument("event")
+            sub.add_argument("--reason", required=True)
+            sub.add_argument("--evidence", action="append", default=[])
+    sub = command("template", communication.template, "Generate an unapproved review/semantic assessment template")
+    sub.add_argument("kind", choices=("review", "semantic"))
+    sub.add_argument("change", nargs="?")
+    sub.add_argument("--output", help="Create UTF-8 JSON exclusively; refuses to overwrite a file")
     return p
 
 
@@ -90,7 +126,11 @@ def main():
     args = cli.parse_args()
     try:
         result = args.function(args)
-        if getattr(args, "format", "json") == "text":
+        if args.command == "context":
+            print(collaboration.render_context(result, args.format))
+        elif args.command == "inbox" and args.format == "text":
+            print(collaboration.render_inbox(result))
+        elif getattr(args, "format", "json") == "text":
             print(render_status(result))
         else:
             print(json.dumps(result, ensure_ascii=False, indent=2))
@@ -103,7 +143,7 @@ def main():
             return 2
         return 0
     except GroupError as exc:
-        print(json.dumps({"error": str(exc), "exit_code": exc.code, "hint": exc.hint}, ensure_ascii=False), file=sys.stderr)
+        print(json.dumps(safe({"error": str(exc), "exit_code": exc.code, "hint": exc.hint}), ensure_ascii=False), file=sys.stderr)
         return exc.code
     except (OSError, ValueError, KeyError, TypeError) as exc:
         print(json.dumps({"error": str(exc), "exit_code": 1,

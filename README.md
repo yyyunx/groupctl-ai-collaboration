@@ -108,6 +108,29 @@ groupctl status --format text
 
 ## 七大協作指令
 
+日常協作也可直接使用新的便利入口（先在目標 team repo 執行，或於 subcommand 前加 --repo PATH）：
+
+```text
+groupctl context --format markdown --max-chars 12000
+groupctl context --format json
+groupctl inbox
+groupctl inbox --format json --type question --person P22
+groupctl inbox --mark-read E-事件ID
+groupctl ask --text "API 格式要統一嗎？"
+groupctl answer Q-問題ID --text "統一使用 JSON"
+groupctl block --summary "資料格式衝突" --action "請確認 schema"
+groupctl resolve E-阻礙事件ID --reason "已更新並驗證"
+groupctl template review C-修改ID --output .group/local/review.json
+groupctl template semantic --output .group/local/semantic.json
+```
+
+Context 只輸出精簡摘要、精確 commit 與證據，不輸出測試原始 logs／設定命令；常見 token、密碼與私鑰會遮罩。
+內容縮減時保留 totals 與 truncated，不能把省略誤認為沒有問題。Inbox 以 --limit 控制每類顯示數量；
+已讀紀錄只保存在 .group/local/inbox.json，與 SYNC 快取不同，也不代表已解決或接受工作。
+快捷溝通需要乾淨的工作目錄並 commit/push；群組層級 blocker 使用 blocking_change_id=GROUP，
+可用 --change C-ID 關聯特定提案。resolve 新增 finding／resolves_events，原事件與 verdict 保持不變。
+Template 建立 UTF-8 JSON 並拒絕覆寫既有檔案；仍需實際審查，不能直接當成通過或人類批准。
+
 這些大寫詞是**對 AI 說的提示指令**；下表是它背後使用的 CLI。
 所有 CLI 預設回傳 JSON，`--repo PATH` 要放在 subcommand 前。
 

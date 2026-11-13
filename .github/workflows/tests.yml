@@ -2,7 +2,7 @@ name: groupctl verification
 
 on:
   push:
-    branches: [main, synthesis/groupctl-final]
+    branches: [main, synthesis/groupctl-final, 'feature/**']
   pull_request:
     branches: [main]
 
