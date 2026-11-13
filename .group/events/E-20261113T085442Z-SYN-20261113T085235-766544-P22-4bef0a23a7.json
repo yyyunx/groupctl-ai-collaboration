@@ -1,0 +1,40 @@
+{
+  "protocol_version": "0.1",
+  "event_id": "E-20261113T085442Z-SYN-20261113T085235-766544-P22-4bef0a23a7",
+  "event_type": "final_result",
+  "group_id": "G-20261113T085235-766544",
+  "person_id": "SYN-20261113T085235-766544-P22",
+  "created_at": "2026-11-13T08:54:42.515954Z",
+  "related_events": [
+    "E-20261113T085431Z-SYN-20261113T085235-766544-P22-c59eed7873"
+  ],
+  "canonical_commit": "f49da3a6a8b42cccef9dd490f45a828b0a949c9c",
+  "final_report_path": ".group/final/final_report.md",
+  "test_evidence": [
+    "E-20261113T085426Z-SYN-20261113T085235-766544-P22-999988b627"
+  ],
+  "known_limitations": [],
+  "initiated_by": "SYN-20261113T085235-766544-P22",
+  "human_confirmation": {
+    "candidate_id": "E-20261113T085431Z-SYN-20261113T085235-766544-P22-c59eed7873",
+    "canonical_commit": "f49da3a6a8b42cccef9dd490f45a828b0a949c9c",
+    "report_sha256": "61aacc8174d2f27f20bdd77233211f3542687737a16992a7144b1bbc8829d630",
+    "confirmed_by": "SYN-20261113T085235-766544-P22",
+    "kind": "simulation",
+    "confirmed_at": "2026-11-13T08:54:40.356122Z",
+    "statement": "Simulated test fixture confirmation; not a human observation."
+  },
+  "evidence_mode": "simulation",
+  "validated_events": [
+    "E-20261113T085257Z-SYN-20261113T085235-766544-P17-725fa126e3",
+    "E-20261113T085308Z-SYN-20261113T085235-766544-P22-e11fb820d2",
+    "E-20261113T085321Z-SYN-20261113T085235-766544-P22-ad023bdd31",
+    "E-20261113T085330Z-SYN-20261113T085235-766544-P22-8773d887dd",
+    "E-20261113T085341Z-SYN-20261113T085235-766544-P31-f3e3167934",
+    "E-20261113T085351Z-SYN-20261113T085235-766544-P22-286d049b3b",
+    "E-20261113T085359Z-SYN-20261113T085235-766544-P22-943ab7b35a",
+    "E-20261113T085416Z-SYN-20261113T085235-766544-P31-41dfeb7643",
+    "E-20261113T085426Z-SYN-20261113T085235-766544-P22-999988b627",
+    "E-20261113T085431Z-SYN-20261113T085235-766544-P22-c59eed7873"
+  ]
+}
