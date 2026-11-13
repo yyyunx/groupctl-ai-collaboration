@@ -247,3 +247,57 @@ class SynthesisRegressions(GitFixture):
                 call(self.a, "final_publish", candidate=prepared["candidate_id"], confirm=True)
         self.assertTrue((self.a / "concurrent.py").exists())
         self.assertFalse((self.a / ".group/final/final.json").exists())
+
+    def test_historical_diff_preserves_multi_commit_contribution_after_merge(self):
+        (self.a / "first.py").write_text("FIRST = 1\n", encoding="utf-8")
+        git(self.a, "add", "first.py")
+        git(self.a, "commit", "-m", "First part of one contribution")
+        (self.a / "second.py").write_text("SECOND = 2\n", encoding="utf-8")
+        change = self.publish(self.a, "Two-commit contribution")
+        before = call(self.b, "inspect", change=change["change_id"])
+        self.assertIn("FIRST = 1", before["diff"])
+        self.assertIn("SECOND = 2", before["diff"])
+        self.integrate(self.b, change["change_id"])
+        git(self.b, "switch", "main")
+        git(self.b, "merge", "--no-edit", "people/P22/work")
+        git(self.b, "push", "origin", "main")
+        after = call(self.b, "inspect", change=change["change_id"])
+        self.assertTrue(after["already_incorporated"])
+        self.assertEqual(after["diff"], before["diff"])
+        self.assertEqual(after["base"], change["event"]["base_commit"])
+        self.assertEqual(after["diff_base_source"], "published_base")
+        # Protocol 0.1 legacy events are still accepted, with an explicit fallback warning.
+        r = Repository(self.b)
+        legacy = dict(change["event"])
+        legacy.pop("base_commit")
+        with patch.object(Repository, "change", return_value=legacy):
+            inspected = call(self.b, "inspect", change=legacy["change_id"])
+        self.assertIn("SECOND = 2", inspected["diff"])
+        self.assertEqual(inspected["diff_base_source"], "legacy_first_parent")
+        self.assertIn("Legacy", inspected["warning"])
+
+    def test_event_mutation_introduced_only_in_merge_commit_is_rejected(self):
+        r = Repository(self.a)
+        event = r.publish(r.event("finding", {"summary": "Original immutable fact", "evidence": []}))
+        branch = r.branch
+        git(self.a, "switch", "-c", "side-fixture")
+        (self.a / "side.txt").write_text("side", encoding="utf-8")
+        git(self.a, "add", "side.txt")
+        git(self.a, "commit", "-m", "Side fixture")
+        git(self.a, "switch", branch)
+        (self.a / "other.txt").write_text("other", encoding="utf-8")
+        git(self.a, "add", "other.txt")
+        git(self.a, "commit", "-m", "Other fixture")
+        git(self.a, "merge", "--no-commit", "--no-ff", "side-fixture")
+        event["summary"] = "Tampered ONLY in merge commit"
+        write_json(self.a / ".group/events" / (event["event_id"] + ".json"), event)
+        git(self.a, "add", ".group/events")
+        git(self.a, "commit", "-m", "Deliberate merge-only event rewrite fixture")
+        git(self.a, "push", "origin", "HEAD")
+        with self.assertRaisesRegex(GroupError, "modifications/deletions"):
+            Repository(self.a).events()
+        # Another independent clone must reject the same public history too.
+        peer = Repository(self.b)
+        peer.fetch()
+        with self.assertRaisesRegex(GroupError, "modifications/deletions"):
+            peer.events()

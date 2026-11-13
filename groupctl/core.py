@@ -150,7 +150,10 @@ class Repository:
         if refs:
             # Inspect historical filenames too: a force-updated event on a single
             # remote tip must not bypass immutability checks.
-            mutated = self.output("log", "--format=", "--name-only", "--diff-filter=MD", *refs, "--", ".group/events/")
+            # -m examines a merge against EACH parent. Default git log diffs
+            # omit merge commits and can hide a rewrite introduced only there.
+            mutated = self.output("log", "--full-history", "-m", "--format=", "--name-only",
+                                  "--diff-filter=MD", *refs, "--", ".group/events/")
             if mutated:
                 raise GroupError("Published event history contains modifications/deletions: " + mutated)
         for ref in refs:

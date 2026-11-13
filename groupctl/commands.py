@@ -180,7 +180,7 @@ def pub(args):
     r.git("push", "-u", r.remote, f"HEAD:refs/heads/{r.branch}")
     change_id = f"C-{r.identity()}-{uuid.uuid4().hex[:10]}"
     event = r.event("change_published", {"change_id": change_id, "branch": r.branch, "commit": commit,
-        "summary": args.summary, "files_changed": source_paths, "interface_changes": args.interface_change,
+        "summary": args.summary, "base_commit": base, "files_changed": source_paths, "interface_changes": args.interface_change,
         "tests_run": [json.dumps(x["argv"]) for x in checks["results"]],
         "known_issues": args.known_issue + ([args.unverified_reason] if args.unverified_reason else []),
         "proposed_for_integration": not args.draft, "validation": checks})
@@ -191,9 +191,26 @@ def inspect(args):
     r = repo(args)
     r.fetch()
     change = r.change(args.change)
-    base = r.output("merge-base", change["commit"], r.canonical)
-    return {"event": change, "base": base,
-            "diff": r.git("diff", base, change["commit"], "--", ".", ":(exclude).group").stdout,
+    recorded = change.get("base_commit")
+    warning = None
+    if recorded is not None:
+        if not isinstance(recorded, str) or not re.fullmatch(r"[0-9a-f]{40}|[0-9a-f]{64}", recorded):
+            raise GroupError("Published base_commit must be an exact commit hash")
+        if recorded == change["commit"] or not r.ancestor(recorded, change["commit"]):
+            raise GroupError("Published base_commit must precede the published change")
+        base, source = recorded, "published_base"
+    else:
+        base = r.output("merge-base", change["commit"], r.canonical)
+        source = "legacy_merge_base"
+        if base == change["commit"]:
+            parents = r.output("rev-list", "--parents", "-n", "1", change["commit"]).split()[1:]
+            base = parents[0] if parents else None
+            source = "legacy_first_parent" if parents else "legacy_root"
+            warning = "Legacy event has no recorded base_commit; this diff may cover only its last commit. Inspect Git history for the full contribution."
+    diff = (r.git("diff", base, change["commit"], "--", ".", ":(exclude).group").stdout if base else
+            r.git("show", "--format=", "--root", change["commit"], "--", ".", ":(exclude).group").stdout)
+    return {"event": change, "base": base, "diff_base_source": source, "warning": warning,
+            "diff": diff,
             "already_incorporated": r.ancestor(change["commit"])}
 
 
