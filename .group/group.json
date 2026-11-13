@@ -1,0 +1,19 @@
+{
+  "protocol_version": "0.1",
+  "group_id": "G-20261113T085235-766544",
+  "canonical_branch": "synthesis/verification/20261113T085235-766544",
+  "assignment_file": ".group/assignment/assignment.md",
+  "remote": "origin",
+  "validation_commands": [
+    [
+      "{python}",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "collaboration_fixture_tests",
+      "-v"
+    ]
+  ],
+  "simulation": true
+}
