@@ -1,2 +1,2 @@
 def greet(name):
-    return "Welcome " + name
+    return "Welcome " + name.strip()
