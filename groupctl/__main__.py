@@ -7,7 +7,7 @@ from . import commands
 from .core import GroupError
 from .status import render_status
 from . import __version__
-from . import collaboration, communication, recovery
+from . import collaboration, communication, recovery, onboarding
 from .presentation import safe
 from .events import EVENT_FIELDS
 
@@ -15,7 +15,9 @@ from .events import EVENT_FIELDS
 def parser():
     p = argparse.ArgumentParser(description="groupctl — Git collaboration protocol 0.1",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="Human shorthand: SYNC / PUB / INT / REV / TEST / STATUS / FINAL\n"
+        epilog="第一次使用：doctor → init --help / join --help → context → inbox\n"
+               "換電腦／新 clone：join --resume --person 你的ID --topic 原topic\n"
+               "Human shorthand: SYNC / PUB / INT / REV / TEST / STATUS / FINAL\n"
                "Examples:\n  python -m groupctl --repo ../team status --format text\n"
                "  python -m groupctl --repo ../team inspect C-P17-...\n"
                "  python -m groupctl --repo ../team test main\n"
@@ -31,14 +33,23 @@ def parser():
         return sub
 
     sub = command("init", commands.init, "Create .group configuration without committing unrelated files")
-    for name in ("group", "person", "name", "assignment"):
+    for name in ("group", "person", "assignment"):
         sub.add_argument("--" + name, required=True)
+    sub.add_argument("--name", help="顯示名稱；預設使用 person ID")
+    sub.add_argument("--publish", action="store_true", help="乾淨且已同步的 canonical：只提交 .group、Push、建立個人分支")
+    sub.add_argument("--topic", default="work")
+    sub.add_argument("--checks", choices=tuple(onboarding.CHECK_PRESETS), help="明確選用驗證命令 preset；不會安裝依賴或宣稱 Pass")
     sub.add_argument("--canonical", default="main")
     sub.add_argument("--checks-file", help="JSON list of argument arrays (executed without a shell)")
     sub.add_argument("--simulation", action="store_true", help="Mark an isolated teaching fixture; final records explicitly remain simulation evidence")
     sub = command("join", commands.join, "Register a member on a new personal branch and publish")
-    for name in ("person", "name", "topic"):
+    for name in ("person",):
         sub.add_argument("--" + name, required=True)
+    sub.add_argument("--name", help="顯示名稱；預設使用 person ID")
+    sub.add_argument("--topic", default="work")
+    sub.add_argument("--resume", action="store_true", help="既有成員：恢復原本分支與本機身分，不重複註冊或 Push")
+    sub = command("doctor", onboarding.doctor, "中文設定診斷：Git、身分、Tests、目標 Repository（只讀、離線）")
+    sub.add_argument("--format", choices=("text", "json"), default="text")
     sub = command("identity", commands.identity, "Select an already recognized member locally")
     sub.add_argument("--person", required=True)
     sub = command("status", commands.status, "STATUS: report local and freshly fetched group state")
@@ -141,7 +152,9 @@ def main():
         cli.error("pub requires --summary unless --dry-run is selected")
     try:
         result = args.function(args)
-        if args.command == "context":
+        if args.command == "doctor" and args.format == "text":
+            print(onboarding.render_doctor(result))
+        elif args.command == "context":
             print(collaboration.render_context(result, args.format))
         elif args.command == "inbox" and args.format == "text":
             print(collaboration.render_inbox(result))
@@ -154,6 +167,8 @@ def main():
         else:
             print(json.dumps(result, ensure_ascii=False, indent=2))
         event = result.get("event", {})
+        if args.command == "doctor" and not result["ready"]:
+            return 2
         if result.get("conflicts") or result.get("needs_human"):
             return 2
         if event.get("automated_result") in {"fail", "partial", "not_available"} or event.get("result") in {"failed", "needs_human"}:

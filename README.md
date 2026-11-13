@@ -64,18 +64,21 @@ Skill 格式及 Codex discovery 見 [官方說明](https://learn.chatgpt.com/doc
 
 以下假設另一個 team-project 已有 main、應用程式與真正的 tests，且已設定 origin。
 先在工具目錄執行。把 assignment.md 換成真實需求；examples 只作為格式範例。
+目標專案要有 initial commit、origin，且工作目錄乾淨；既有遠端 main 必須已同步。
 
 ```powershell
-.\run.ps1 --repo ..\team-project init --group G01 --person P17 --name "同學 A" --assignment .\examples\assignment.md --checks-file .\examples\checks.json
-git -C ..\team-project add .group
-git -C ..\team-project commit -m "Initialize group collaboration"
-git -C ..\team-project push origin main
-git -C ..\team-project switch -c people/P17/work
+.\run.ps1 --repo ..\team-project doctor
+.\run.ps1 --repo ..\team-project init --group G01 --person P17 --name "同學 A" --assignment .\examples\assignment.md --checks unittest --publish
 .\run.ps1 --repo ..\team-project status --format text
 ```
 
-`init` 建立 .group 設定，不會偷偷提交其他檔案。空 Git repo 也可先初始化，
+`init --publish` 只提交 .group、推送 canonical，然後建立 people/P17/work，一個指令取代手動 Git 步驟。
+失敗時不要重做 init：用 recover 查看已提交內容，必要時 recover --retry-push。
+不加 --publish 的 `init` 保留原本只建立設定的操作；不提交其他檔案。空 Git repo 也可先初始化，
 但發布與結案前必須加入有意義的驗證命令／測試。
+`--checks unittest` 使用 tests/；`--checks pytest` 使用目前 Python 的 pytest（需自行安裝）。
+兩者都只是設定命令，尚未執行測試。自訂專案仍可使用 --checks-file，不可與 --checks 同時使用。
+`--name` 預設為 person ID，`--topic` 預設為 work；doctor 不連網、不修改 Git，缺少設定時 exit code 2 並給修復提示。
 
 `.group/group.json` 的可選 validation_commands 使用 argv 陣列：
 
@@ -103,8 +106,17 @@ groupctl status --format text
 ```
 
 第三位使用不同身分，例如 P31。join 從遠端 canonical 建立個人分支，
-提交成員描述並推送。既有成員重新 clone，使用 `identity --person P17`，
-再建立自己的個人分支。重要進度來自 Git／公開事件，不需複製舊聊天紀錄。
+提交成員描述並推送。既有成員換電腦或重新 clone 後，用一個指令恢復原本分支和本機身分：
+
+```text
+groupctl join --resume --person P22 --topic renderer
+groupctl context --format markdown
+groupctl inbox
+```
+
+resume 不重複註冊或 Push；只在安全時 fast-forward，分歧或未提交工作會停止並保留現場。
+若從未發布個人分支，但 canonical 已有你的成員描述，會建立對應個人分支。
+`identity` 仍可用於目前 checkout 已認識的成員。重要進度來自 Git／公開事件，不需複製舊聊天紀錄。
 
 ## 七大協作指令
 

@@ -16,13 +16,18 @@ def repo(args):
 def init(args):
     r = Repository(args.repo, configured=False)
     if r.meta.exists():
-        raise GroupError(".group already exists; refusing to overwrite group state")
+        raise GroupError(".group already exists; refusing to overwrite group state", hint="先 doctor／recover；既有成員用 join --resume，不要重做 init。")
     identifier(args.group)
     identifier(args.person)
     r.git("check-ref-format", "--branch", args.canonical)
     assignment = Path(args.assignment).read_text(encoding="utf-8-sig")
-    checks = read_json(args.checks_file) if args.checks_file else []
+    from .onboarding import CHECK_PRESETS, prepare_init, publish_init
+    preset = getattr(args, "checks", None)
+    if preset and args.checks_file:
+        raise GroupError("Choose --checks or --checks-file, not both", code=2)
+    checks = CHECK_PRESETS[preset] if preset else read_json(args.checks_file) if args.checks_file else []
     validate_commands(checks)
+    prepare_init(r, args, assignment, checks)
     config = {"protocol_version": "0.1", "group_id": args.group,
               "canonical_branch": args.canonical, "assignment_file": ".group/assignment/assignment.md",
               "remote": "origin", "validation_commands": checks}
@@ -38,7 +43,9 @@ def init(args):
     (r.local / ".gitignore").write_text("*\n!.gitkeep\n!.gitignore\n", encoding="utf-8")
     write_json(r.local / "identity.json", {"person_id": args.person})
     write_json(r.meta / "members" / f"{args.person}.json", {
-        "protocol_version": "0.1", "person_id": args.person, "display_name": args.name, "joined_at": now()})
+        "protocol_version": "0.1", "person_id": args.person, "display_name": args.name or args.person, "joined_at": now()})
+    if getattr(args, "publish", False):
+        return publish_init(args)
     return {"group_id": args.group, "person_id": args.person,
             "next": "Commit .group setup, push canonical branch, then create your personal branch. "
                     f"Commands: git add .group; git commit; git push -u origin {args.canonical}; "
@@ -51,18 +58,28 @@ def join(args):
     identifier(args.person)
     identifier(args.topic)
     r.fetch()
+    from .onboarding import exists, member_at, resume_join
+    if getattr(args, "resume", False):
+        return resume_join(r, args)
     branch = f"people/{args.person}/{args.topic}"
-    if (r.meta / "members" / f"{args.person}.json").exists():
-        raise GroupError("Member exists. Use identity to select an existing recognized person.")
+    if (r.meta / "members" / f"{args.person}.json").exists() or member_at(r, r.canonical, args.person) or exists(r, f"refs/remotes/{r.remote}/{branch}"):
+        raise GroupError("Member or personal branch exists; no new registration was created.",
+                         hint=f"join --resume --person {args.person} --topic {args.topic}")
     r.git("switch", "-c", branch, r.canonical)
     member = f".group/members/{args.person}.json"
     write_json(r.root / member, {"protocol_version": "0.1", "person_id": args.person,
-                               "display_name": args.name, "joined_at": now()})
+                               "display_name": args.name or args.person, "joined_at": now()})
     write_json(r.local / "identity.json", {"person_id": args.person})
     r.git("add", "--", member)
     r.git("commit", "-m", f"group: register {args.person}", "--", member)
-    r.git("push", "-u", r.remote, f"HEAD:refs/heads/{branch}")
-    return {"person_id": args.person, "branch": branch, "published": True}
+    try:
+        r.git("push", "-u", r.remote, f"HEAD:refs/heads/{branch}")
+    except GroupError as exc:
+        from .localstate import push_failure
+        push_failure(r, "join_push")
+        raise GroupError("成員註冊已提交，但尚未確認發布；不要重新 join。",
+                         hint="確認網路／權限後 recover --retry-push；不會重複建立成員紀錄。") from exc
+    return {"person_id": args.person, "branch": branch, "published": True, "next": "context --format markdown；inbox。"}
 
 
 def identity(args):
