@@ -3,7 +3,7 @@ from .core import Repository, GroupError, now
 from . import localstate
 from .policy import unresolved_blockers
 from .presentation import safe, summary, json_text, redact
-from .status import state
+from .status import state, render_status
 
 
 class ObservedRepository(Repository):
@@ -111,6 +111,7 @@ def inbox(args):
         "counts": {key: len(value) for key, value in categories.items()},
         **{key: value[-limit:] for key, value in categories.items()}, "marked_read": sorted(marks),
         "recommended_next_action": view["recommended_next_action"],
+        "recommended_next_action_text": render_status(view).split("下一步：", 1)[-1],
         "note": "已讀只影響本機收件匣；不代表接受修改、批准審查或解決問題。"})
 
 
@@ -185,6 +186,13 @@ def render_inbox(value):
              f"資料：{value['freshness']['mode']}；可能過期：{value['freshness']['may_be_stale']}"]
     for key, title in labels.items():
         lines.append(f"\n{title}（共 {value['counts'][key]}，顯示 {len(value[key])}）")
-        lines += ["- " + json_text(item).replace("\n", " ") for item in value[key]] or ["- 無"]
-    lines += ["\n下一步：" + value["recommended_next_action"], value["note"]]
+        for item in value[key]:
+            identifier = item.get("event_id", item.get("change_id", ""))
+            detail = item.get("summary", item.get("text", ""))
+            verdict = "；審查=" + item["verdict"] if item.get("verdict") else ""
+            action = "；請處理：" + item["requested_action"] if item.get("requested_action") else ""
+            lines.append(f"- {identifier} | {item.get('person_id', '')} | {detail}{verdict}{action}")
+        if not value[key]:
+            lines.append("- 無")
+    lines += ["\n下一步：" + value["recommended_next_action_text"], value["note"]]
     return "\n".join(lines)

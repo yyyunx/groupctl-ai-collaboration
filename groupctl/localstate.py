@@ -8,6 +8,8 @@ from .errors import GroupError
 
 def load(r, name, default):
     path = r.path(".group/local/" + name)
+    if not path.is_relative_to(r.local.resolve()):
+        raise GroupError("Local state must stay inside .group/local")
     if not path.exists():
         return default
     try:
@@ -18,6 +20,8 @@ def load(r, name, default):
 
 def save(r, name, value):
     path = r.path(".group/local/" + name)
+    if not path.is_relative_to(r.local.resolve()):
+        raise GroupError("Local state must stay inside .group/local")
     relative = path.relative_to(r.root).as_posix()
     if r.git("ls-files", "--error-unmatch", "--", relative, ok=(0, 1)).returncode == 0:
         raise GroupError("Local state must not be tracked in Git: " + relative)

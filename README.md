@@ -131,6 +131,25 @@ Context 只輸出精簡摘要、精確 commit 與證據，不輸出測試原始 
 可用 --change C-ID 關聯特定提案。resolve 新增 finding／resolves_events，原事件與 verdict 保持不變。
 Template 建立 UTF-8 JSON 並拒絕覆寫既有檔案；仍需實際審查，不能直接當成通過或人類批准。
 
+提交／整合前可先看只讀預覽，網路中斷後可先診斷再明確重試：
+
+```text
+groupctl pub --dry-run
+groupctl integrate C-修改ID --preview
+groupctl recover
+groupctl recover --format json --offline
+groupctl recover --retry-push
+groupctl recover --resume-integration C-修改ID
+```
+
+預覽不 fetch、不執行測試、不建立 worktree，也不寫入工作檔案、Git index、objects、refs 或遠端。
+它會列出修改檔案、配置的測試、目標 commit 與潛在檔案重疊；這些風險不等於已證實的 Git conflict。
+Recover 預設只診斷，斷線時會使用標示為可能過期的本機資料。--retry-push 要求 fresh fetch 與乾淨工作目錄，
+只用一般 fast-forward push 推送現有 HEAD，重用原 event ID；若遠端分歧會拒絕，不 force push 或 reset。
+只有程式碼缺少發布說明時，會要求你先檢查再 PUB，不自行捏造 summary。
+--resume-integration 只在 MERGE_HEAD 或目前 merge commit 的 parent 精確符合 change 時重建遺失的 .group/local 記錄；
+不解衝突、不改 index／branch。原衝突清單可能不完整，後續 integration_result 會註明 recovered state，仍須實際語意審查。
+
 這些大寫詞是**對 AI 說的提示指令**；下表是它背後使用的 CLI。
 所有 CLI 預設回傳 JSON，`--repo PATH` 要放在 subcommand 前。
 

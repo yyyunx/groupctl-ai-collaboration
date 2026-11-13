@@ -7,7 +7,7 @@ from . import commands
 from .core import GroupError
 from .status import render_status
 from . import __version__
-from . import collaboration, communication
+from . import collaboration, communication, recovery
 from .presentation import safe
 from .events import EVENT_FIELDS
 
@@ -51,7 +51,8 @@ def parser():
     sub.add_argument("--file", required=True, help="JSON payload, without envelope fields")
     sub.add_argument("--related", action="append", default=[])
     sub = command("pub", commands.pub, "PUB: validate, commit and push contribution plus change event")
-    sub.add_argument("--summary", required=True)
+    sub.add_argument("--summary")
+    sub.add_argument("--dry-run", action="store_true", help="Read-only cached preview; no tests, Git writes or network")
     sub.add_argument("--interface-change", action="append", default=[])
     sub.add_argument("--known-issue", action="append", default=[])
     sub.add_argument("--draft", action="store_true")
@@ -66,6 +67,7 @@ def parser():
     sub.add_argument("--human-check", action="append", default=[])
     sub = command("integrate", commands.integrate, "INT phase 1: merge; conflicts and semantic review remain explicit")
     sub.add_argument("change")
+    sub.add_argument("--preview", action="store_true", help="Read-only file-overlap risk preview; not a Git merge result")
     sub = command("integrate-finish", commands.integrate_finish, "INT phase 2: validate and publish integration outcome")
     sub.add_argument("--file", required=True)
     command("integrate-abort", commands.integrate_abort, "Abort only an uncommitted pending merge")
@@ -112,6 +114,12 @@ def parser():
     sub.add_argument("kind", choices=("review", "semantic"))
     sub.add_argument("change", nargs="?")
     sub.add_argument("--output", help="Create UTF-8 JSON exclusively; refuses to overwrite a file")
+    sub = command("recover", recovery.recover, "Diagnose incomplete operations; retry only existing commits when explicitly requested")
+    sub.add_argument("--format", choices=("text", "json"), default="text")
+    sub.add_argument("--offline", action="store_true")
+    action = sub.add_mutually_exclusive_group()
+    action.add_argument("--retry-push", action="store_true", help="Fresh fetch + normal fast-forward push of existing HEAD; no new events")
+    action.add_argument("--resume-integration", metavar="CHANGE_ID", help="Restore missing local integration metadata from an exact Git merge")
     return p
 
 
@@ -124,12 +132,16 @@ def main():
         cli.print_help()
         return 0
     args = cli.parse_args()
+    if args.command == "pub" and not args.dry_run and not args.summary:
+        cli.error("pub requires --summary unless --dry-run is selected")
     try:
         result = args.function(args)
         if args.command == "context":
             print(collaboration.render_context(result, args.format))
         elif args.command == "inbox" and args.format == "text":
             print(collaboration.render_inbox(result))
+        elif args.command == "recover" and args.format == "text":
+            print(recovery.render_recovery(result))
         elif getattr(args, "format", "json") == "text":
             print(render_status(result))
         else:
@@ -146,8 +158,8 @@ def main():
         print(json.dumps(safe({"error": str(exc), "exit_code": exc.code, "hint": exc.hint}), ensure_ascii=False), file=sys.stderr)
         return exc.code
     except (OSError, ValueError, KeyError, TypeError) as exc:
-        print(json.dumps({"error": str(exc), "exit_code": 1,
-                          "hint": "Check input JSON, paths and repository configuration; no success is claimed."}, ensure_ascii=False), file=sys.stderr)
+        print(json.dumps(safe({"error": str(exc), "exit_code": 1,
+                          "hint": "Check input JSON, paths and repository configuration; no success is claimed."}), ensure_ascii=False), file=sys.stderr)
         return 1
 
 

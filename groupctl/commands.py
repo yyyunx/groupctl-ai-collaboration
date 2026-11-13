@@ -143,6 +143,9 @@ def check_source_files(r, paths):
 
 
 def pub(args):
+    if getattr(args, "dry_run", False):
+        from .preview import pub as preview_pub
+        return preview_pub(args)
     r = repo(args)
     r.personal()
     r.fetch()
@@ -177,7 +180,12 @@ def pub(args):
         r.git("commit", "-m", args.summary, "--", *paths)
     commit = r.head
     r.clean()
-    r.git("push", "-u", r.remote, f"HEAD:refs/heads/{r.branch}")
+    try:
+        r.git("push", "-u", r.remote, f"HEAD:refs/heads/{r.branch}")
+    except GroupError:
+        from .localstate import push_failure
+        push_failure(r, "source_push")
+        raise
     change_id = f"C-{r.identity()}-{uuid.uuid4().hex[:10]}"
     event = r.event("change_published", {"change_id": change_id, "branch": r.branch, "commit": commit,
         "summary": args.summary, "base_commit": base, "files_changed": source_paths, "interface_changes": args.interface_change,
@@ -249,6 +257,9 @@ def test(args):
 
 
 def integrate(args):
+    if getattr(args, "preview", False):
+        from .preview import integrate as preview_integration
+        return preview_integration(args)
     r = repo(args)
     r.personal()
     r.clean()
@@ -303,6 +314,8 @@ def integrate_finish(args):
                          "tests": checks["automated_result"] if checks["automated_result"] in {"pass", "fail"} else "not_available",
                          "semantic_review": assessment["semantic_review"]},
         "summary": assessment["summary"], "validation": checks}, [saved["event_id"]])
+    if saved.get("recovered_state"):
+        event["recovery"] = {"reconstructed": True, "conflict_history_complete": False}
     if event["verification"]["build"] == "fail":
         event["result"] = "failed"
     elif event["verification"]["build"] == "not_available" and event["result"] == "success":

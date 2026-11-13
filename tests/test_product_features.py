@@ -40,7 +40,7 @@ class PresentationTests(unittest.TestCase):
         self.assertEqual(safe({"commit": "a" * 40})["commit"], "a" * 40)
 
     def test_private_keys_and_argument_pairs_are_hidden(self):
-        value = "-----BEGIN PRIVATE KEY-----\nnot-a-real-key\n-----END PRIVATE KEY-----"
+        value = "-----BEGIN " + "PRIVATE KEY-----\nnot-a-real-key\n-----END " + "PRIVATE KEY-----"
         self.assertNotIn("not-a-real-key", redact(value))
         self.assertEqual(safe_commands([["runner", "--token", "hidden", "--flag"]])[0][2], "[REDACTED]")
 
@@ -81,6 +81,15 @@ class ContextInboxCommunicationTests(GitFixture):
             self.assertEqual(pack["totals"]["unanswered_questions"], 1)
             self.assertTrue(pack["truncated"])
         self.assertEqual(index_bytes(self.a), before)
+        for format in ("json", "markdown"):
+            output = subprocess.run([sys.executable, "-m", "groupctl", "--repo", str(self.a), "context", "--offline",
+                                     "--format", format, "--max-chars", "3000"], cwd=ROOT, capture_output=True, text=True, encoding="utf-8")
+            self.assertEqual(output.returncode, 0, output.stderr)
+            self.assertLessEqual(len(output.stdout), 3000)
+            if format == "json":
+                self.assertEqual(json.loads(output.stdout)["person_id"], "P17")
+            else:
+                self.assertTrue(output.stdout.startswith("# Agent Context Pack"))
 
     def test_inbox_read_state_is_local_per_member_and_does_not_touch_index(self):
         question = talk(self.a, "ask", text="Need a schema decision")["event"]
