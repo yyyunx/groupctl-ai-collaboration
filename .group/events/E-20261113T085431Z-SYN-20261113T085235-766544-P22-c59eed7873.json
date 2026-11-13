@@ -1,0 +1,21 @@
+{
+  "protocol_version": "0.1",
+  "event_id": "E-20261113T085431Z-SYN-20261113T085235-766544-P22-c59eed7873",
+  "event_type": "final_candidate",
+  "group_id": "G-20261113T085235-766544",
+  "person_id": "SYN-20261113T085235-766544-P22",
+  "created_at": "2026-11-13T08:54:31.861830Z",
+  "related_events": [
+    "E-20261113T085426Z-SYN-20261113T085235-766544-P22-999988b627"
+  ],
+  "canonical_commit": "f49da3a6a8b42cccef9dd490f45a828b0a949c9c",
+  "candidate_report_path": ".group/final/candidate.md",
+  "test_evidence": [
+    "E-20261113T085426Z-SYN-20261113T085235-766544-P22-999988b627"
+  ],
+  "known_issues": [],
+  "report_sha256": "61aacc8174d2f27f20bdd77233211f3542687737a16992a7144b1bbc8829d630",
+  "dispositions": {},
+  "human_evidence": [],
+  "evidence_mode": "simulation"
+}
