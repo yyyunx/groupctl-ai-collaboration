@@ -1,0 +1,43 @@
+{
+  "protocol_version": "0.1",
+  "event_id": "E-20261113T085426Z-SYN-20261113T085235-766544-P22-999988b627",
+  "event_type": "test_result",
+  "group_id": "G-20261113T085235-766544",
+  "person_id": "SYN-20261113T085235-766544-P22",
+  "created_at": "2026-11-13T08:54:26.162479Z",
+  "related_events": [],
+  "scope": "canonical_final",
+  "commit": "f49da3a6a8b42cccef9dd490f45a828b0a949c9c",
+  "commands": [
+    "[\"C:\\\\Program Files\\\\WindowsApps\\\\OpenAI.CodexPrimaryRuntime.v26-1111-570-0_26.1111.570.0_x64__3k8sg7r9htsxt\\\\dependencies\\\\python\\\\python.exe\", \"-m\", \"unittest\", \"discover\", \"-s\", \"collaboration_fixture_tests\", \"-v\"]"
+  ],
+  "automated_result": "pass",
+  "passed": 4,
+  "failed": 0,
+  "skipped": 0,
+  "human_checks_required": [],
+  "summary": "Automated validation: pass",
+  "command_results": [
+    {
+      "argv": [
+        "C:\\Program Files\\WindowsApps\\OpenAI.CodexPrimaryRuntime.v26-1111-570-0_26.1111.570.0_x64__3k8sg7r9htsxt\\dependencies\\python\\python.exe",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "collaboration_fixture_tests",
+        "-v"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": "test_name (test_greet.GreetingTest.test_name) ... ok\ntest_trim (test_greet.GreetingTest.test_trim) ... ok\ntest_negative (test_numbers.AdditionTest.test_negative) ... ok\ntest_positive (test_numbers.AdditionTest.test_positive) ... ok\n\n----------------------------------------------------------------------\nRan 4 tests in 0.000s\n\nOK\n",
+      "counts": [
+        4,
+        0,
+        0
+      ],
+      "evidence_state": "pass"
+    }
+  ],
+  "validation_issues": []
+}
