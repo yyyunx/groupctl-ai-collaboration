@@ -53,6 +53,9 @@ class Repository:
         self.meta = self.root / ".group"
         self.local = self.meta / "local"
         self.path(".group/local")
+        if configured and not (self.meta / "group.json").exists():
+            raise GroupError("找不到 .group/group.json；請先指向小組專案。",
+                             hint="groupctl --repo <小組 clone> doctor；第一位成員 init，其他成員先 clone 後 join。")
         self.config = read_json(self.meta / "group.json") if configured else {}
         if configured:
             if not isinstance(self.config, dict):
@@ -107,6 +110,8 @@ class Repository:
             raise GroupError("An unfinished merge must be resolved first")
 
     def identity(self):
+        if not (self.local / "identity.json").exists():
+            raise GroupError("此 clone 尚未選擇成員身分。", hint="join --resume --person <既有ID> --topic <原topic>；新成員用 join。")
         value = read_json(self.local / "identity.json")
         if not isinstance(value, dict):
             raise GroupError("Local identity must be a JSON object")

@@ -1,6 +1,6 @@
 # groupctl：人與 AI 的 Git 協作工具
 
-**Group 3 — yyyunx，protocol 0.1，工具版本 0.3.0。**
+**Group 3 — yyyunx，protocol 0.1，工具版本 0.3.1。**
 每位學生與自己的 AI 在各自電腦上開發，透過同一個 GitHub repository
 發布、審查、整合與測試，最後形成一份共同成果。這個工具不會啟動三個 AI，
 也不需要 OpenAI／Gemini API。AI 提供判斷，groupctl 執行機械操作並留下證據。
@@ -60,22 +60,30 @@ Claude／Gemini 亦有 `CLAUDE.md`、`GEMINI.md` 入口。
 安裝 Skill 不會自動安裝 Python package；兩者都要可用。
 Skill 格式及 Codex discovery 見 [官方說明](https://learn.chatgpt.com/docs/build-skills)。
 
+已設定好目標專案後，每次開新 Codex／Gemini／Claude 對話，可把
+`groupctl context --format markdown` 的實際輸出交給 AI，請它先讀 tasks 與 inbox。
+Context 現在附目標路徑、command_prefix、dirty 檔案、精簡操作規則和真人確認界線；不依賴舊聊天紀錄。
+若未安裝 groupctl，仍可從工具目錄用 run.ps1／python -m groupctl，並指定 --repo 到同一個目標。
+
 ## 建立小組：第一位成員
 
 以下假設另一個 team-project 已有 main、應用程式與真正的 tests，且已設定 origin。
 先在工具目錄執行。把 assignment.md 換成真實需求；examples 只作為格式範例。
+目標專案要有 initial commit、origin，且工作目錄乾淨；既有遠端 main 必須已同步。
 
 ```powershell
-.\run.ps1 --repo ..\team-project init --group G01 --person P17 --name "同學 A" --assignment .\examples\assignment.md --checks-file .\examples\checks.json
-git -C ..\team-project add .group
-git -C ..\team-project commit -m "Initialize group collaboration"
-git -C ..\team-project push origin main
-git -C ..\team-project switch -c people/P17/work
+.\run.ps1 --repo ..\team-project doctor
+.\run.ps1 --repo ..\team-project init --group G01 --person P17 --name "同學 A" --assignment .\examples\assignment.md --checks unittest --publish
 .\run.ps1 --repo ..\team-project status --format text
 ```
 
-`init` 建立 .group 設定，不會偷偷提交其他檔案。空 Git repo 也可先初始化，
+`init --publish` 只提交 .group、推送 canonical，然後建立 people/P17/work，一個指令取代手動 Git 步驟。
+失敗時不要重做 init：用 recover 查看已提交內容，必要時 recover --retry-push。
+不加 --publish 的 `init` 保留原本只建立設定的操作；不提交其他檔案。空 Git repo 也可先初始化，
 但發布與結案前必須加入有意義的驗證命令／測試。
+`--checks unittest` 使用 tests/；`--checks pytest` 使用目前 Python 的 pytest（需自行安裝）。
+兩者都只是設定命令，尚未執行測試。自訂專案仍可使用 --checks-file，不可與 --checks 同時使用。
+`--name` 預設為 person ID，`--topic` 預設為 work；doctor 不連網、不修改 Git，缺少設定時 exit code 2 並給修復提示。
 
 `.group/group.json` 的可選 validation_commands 使用 argv 陣列：
 
@@ -103,8 +111,17 @@ groupctl status --format text
 ```
 
 第三位使用不同身分，例如 P31。join 從遠端 canonical 建立個人分支，
-提交成員描述並推送。既有成員重新 clone，使用 `identity --person P17`，
-再建立自己的個人分支。重要進度來自 Git／公開事件，不需複製舊聊天紀錄。
+提交成員描述並推送。既有成員換電腦或重新 clone 後，用一個指令恢復原本分支和本機身分：
+
+```text
+groupctl join --resume --person P22 --topic renderer
+groupctl context --format markdown
+groupctl inbox
+```
+
+resume 不重複註冊或 Push；只在安全時 fast-forward，分歧或未提交工作會停止並保留現場。
+若從未發布個人分支，但 canonical 已有你的成員描述，會建立對應個人分支。
+`identity` 仍可用於目前 checkout 已認識的成員。重要進度來自 Git／公開事件，不需複製舊聊天紀錄。
 
 ## 七大協作指令
 
@@ -127,6 +144,9 @@ groupctl template semantic --output .group/local/semantic.json
 Context 只輸出精簡摘要、精確 commit 與證據，不輸出測試原始 logs／設定命令；常見 token、密碼與私鑰會遮罩。
 內容縮減時保留 totals 與 truncated，不能把省略誤認為沒有問題。Inbox 以 --limit 控制每類顯示數量；
 已讀紀錄只保存在 .group/local/inbox.json，與 SYNC 快取不同，也不代表已解決或接受工作。
+Inbox 的 tasks 區分可協助審查、你的修改收到意見、公開問題待回答、自己的問題待回覆與 blocker；
+提供精確 ID 與下一步 argv。shared suggestion 只是可協助事項，不會自動指派工作。
+未讀數可歸零，但未完成的 Review 仍保留。canonical_incorporated 表示納入 Git 歷史，不能保證沒有後續 revert。
 快捷溝通需要乾淨的工作目錄並 commit/push；群組層級 blocker 使用 blocking_change_id=GROUP，
 可用 --change C-ID 關聯特定提案。resolve 新增 finding／resolves_events，原事件與 verdict 保持不變。
 Template 建立 UTF-8 JSON 並拒絕覆寫既有檔案；仍需實際審查，不能直接當成通過或人類批准。
@@ -139,6 +159,7 @@ groupctl integrate C-修改ID --preview
 groupctl recover
 groupctl recover --format json --offline
 groupctl recover --retry-push
+groupctl recover --update
 groupctl recover --resume-integration C-修改ID
 ```
 
@@ -146,6 +167,9 @@ groupctl recover --resume-integration C-修改ID
 它會列出修改檔案、配置的測試、目標 commit 與潛在檔案重疊；這些風險不等於已證實的 Git conflict。
 Recover 預設只診斷，斷線時會使用標示為可能過期的本機資料。--retry-push 要求 fresh fetch 與乾淨工作目錄，
 只用一般 fast-forward push 推送現有 HEAD，重用原 event ID；若遠端分歧會拒絕，不 force push 或 reset。
+診斷會區分 missing／ahead／behind／diverged／synced；純落後時可用 --update 將目前分支 fast-forward
+到剛 fetch 的遠端版本，不會合併其他 feature branch。Dirty、分歧、未完成 integration、離線均拒絕更新。
+--update 不 Push、不執行測試、不預設語意成功；更新後依 context／TEST 檢查最新工作。
 只有程式碼缺少發布說明時，會要求你先檢查再 PUB，不自行捏造 summary。
 --resume-integration 只在 MERGE_HEAD 或目前 merge commit 的 parent 精確符合 change 時重建遺失的 .group/local 記錄；
 不解衝突、不改 index／branch。原衝突清單可能不完整，後續 integration_result 會註明 recovered state，仍須實際語意審查。
@@ -186,6 +210,18 @@ accept、accept_with_changes、reject、needs_more_evidence。
 
 語意審查範例在 examples/semantic-review.json；reviewed_commit 必須等於整合後 HEAD。
 自動合併不會預設語意成功。沒有 tests 的整合最多是 needs_human。
+
+不想手動建立 JSON 時，也可明確提供實際判斷（以下 SHA、文字都要換成你真正檢查的內容）：
+
+```text
+groupctl inspect C-修改ID
+groupctl review C-修改ID --verdict accept --inspected-commit 完整來源SHA --diff-inspected --summary "實際審查結果" --evidence "檢查過的行為或證據"
+groupctl integrate C-修改ID
+groupctl integrate-finish --semantic-review pass --reviewed-commit 完整整合後HEAD --build not_applicable --summary "實際相容性判斷" --resolution "沒有文字衝突；已檢查雙方行為"
+```
+
+--verdict、--semantic-review 沒有預設 Pass。工具仍驗證精確 commit，INT 仍執行隔離測試；
+build 不可用、語意失敗或缺少測試仍不會通過。`--file` 仍相容，不能與 inline assessment 混用。
 
 PUB 會記錄 optional base_commit，讓已合併 change 的歷史 diff 仍可重建；舊事件缺少基底時會顯示 legacy warning，可能只能呈現最後一個 commit，需進一步閱讀 Git history。
 事件不可變性亦檢查 merge commit 的每個 parent，不能藉由只在 merge 時改寫 JSON 來避過檢查。
@@ -250,6 +286,8 @@ CI 在 Ubuntu／Windows 執行完整 suite、Demo、package 安裝 smoke。
 | not a git repository／沒有 .group | 指向正確 team clone；第一位 init，其他成員先 clone |
 | working tree is not clean | 先保護並整理未完成修改；工具不會自動丟棄 dirty work |
 | push 被拒絕／NOT published | 檢查權限與網路、fetch 並處理分歧後重試 push；不可 force push |
+| 設定或身分不明 | doctor；既有成員換電腦用 join --resume --person ID --topic 原topic |
+| 同一個人分支在別台電腦有新提交 | recover 確認 behind，再 recover --update；有分歧時先刻意整合兩邊歷史 |
 | not_available／partial | 補上有意義的測試、依賴或人工檢查；不能當 pass |
 | Git conflict | 檢查雙方意圖、修改並提交，再 integrate-finish；不清楚時問真人 |
 | 放棄未完成整合 | integrate-abort；已提交的 merge 不會被偷偷 reset，需刻意 revert |
@@ -271,6 +309,7 @@ Exit code：0 成功；1 操作／前置條件錯誤；2 CLI 用法錯誤或驗�
 - groupctl/collaboration.py／presentation.py：有長度限制的 Agent Context、Inbox、Trace、風險投影與遮罩。
 - groupctl/communication.py：快速提問／回答／blocker／解決事件與未批准的 assessment templates。
 - groupctl/preview.py／recovery.py／localstate.py：只讀預覽、明確重試與只存在本機的已讀／恢復紀錄。
+- groupctl/onboarding.py／tasks.py：一鍵設定、身分恢復、只讀診斷與根據實際證據的待辦建議。
 - .group/local：可丟棄的本機支援資料；公開事件會封存在推送歷史中。
 - spec/：原始八份作業規格，保留不改。
 - [整合報告](docs/SYNTHESIS_REPORT.md)、[實作差異](docs/IMPLEMENTATION_SUMMARY.md)。

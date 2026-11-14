@@ -19,6 +19,14 @@ needed for the user's requested setup. Give different people different IDs and
 ## Workflow routing
 
 Start a fresh session with `context --format markdown` (or JSON) and `inbox`.
+If setup is unclear, `doctor` diagnoses it offline without changing Git. A
+returning member uses `join --resume --person <id> --topic <original-topic>`;
+never re-register that identity to get around a rejected push. The first member
+may explicitly use `init --publish --checks unittest` on a clean, synchronized
+canonical branch to publish metadata and create a personal branch in one step.
+Context includes the target command prefix, dirty file names and task suggestions.
+Tasks are evidence-based suggestions, not team assignments. Replace placeholders
+with actual findings; marking a task's event read does not complete the task.
 The pack is length-limited: inspect its totals/truncated flag and request the
 relevant full change or events before judging. Use `trace <change_id>` for its
 actual lifecycle. `--offline` uses cached refs; report possible staleness.
@@ -27,12 +35,19 @@ they run no tests and predict file overlap only, not a confirmed Git conflict.
 For interruptions, diagnose with `recover`; retry existing commits explicitly
 with `recover --retry-push` rather than creating duplicate events. Never force
 push or reset to make recovery appear successful.
+For a branch that is only behind its own remote, `recover --update` performs a
+clean fast-forward after fresh fetch; divergence requires deliberate integration.
+Updating a branch does not establish test or semantic success.
 
 Use `ask --text`, `answer <question_id> --text`, `block --summary --action`,
 and `resolve <event_id> --reason` for honest communication from a clean tree.
 Resolution is a new record, not a rewritten verdict. `template review <change_id>`
 and `template semantic` generate unapproved JSON; inspect and assess before
 publishing. Marking inbox events read is local bookkeeping, never approval.
+`review --verdict ... --inspected-commit <full-sha> --diff-inspected --summary ...`
+and `integrate-finish --semantic-review ... --reviewed-commit <full-sha> --build ...
+--summary ... --resolution ...` avoid a JSON file. These flags require actual
+assessment and preserve the same exact-commit checks; never guess a passing verdict.
 
 - SYNC: discover public events, inspect relevant changes, then safely update
   canonical state. Preserve dirty work; do not merge all feature branches.
