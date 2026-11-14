@@ -103,6 +103,16 @@ class StudentOnboardingTests(GitFixture):
         self.assertEqual(result.returncode, 2)
         self.assertIn("工具原始碼目錄", result.stdout)
         self.assertIn("--repo", result.stdout)
+        config = fresh / ".group/group.json"
+        data = json.loads(config.read_text(encoding="utf-8"))
+        data["validation_commands"] = "not an argv array"
+        config.write_text(json.dumps(data), encoding="utf-8")
+        content = config.read_bytes()
+        result = cli(fresh, "doctor", "--format", "json")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("validation_commands", result.stdout)
+        self.assertEqual(config.read_bytes(), content)
+        self.assertEqual(index_bytes(fresh), before)
 
     def test_initialization_dirty_guard_and_failed_push_resume_without_duplicate_setup(self):
         remote = self.base / "setup.git"; remote.mkdir()

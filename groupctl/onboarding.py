@@ -6,6 +6,7 @@ from .core import Repository, GroupError, execute, identifier
 from .collaboration import ObservedRepository
 from . import localstate
 from .presentation import safe, reject_secrets, safe_commands
+from .validation import validate_commands
 
 
 CHECK_PRESETS = {
@@ -138,6 +139,7 @@ def doctor(args):
     try:
         r = ObservedRepository(args.repo)
         add("group", True, "小組設定有效。")
+        validate_commands(r.config.get("validation_commands", []))
         validation = bool(r.config.get("validation_commands"))
         add("validation", validation, "已設定驗證命令；尚未執行。" if validation else "尚未設定 Tests；不能算 Pass。",
             "在 .group/group.json 設定 validation_commands；不會自動假設測試通過。")
@@ -148,6 +150,9 @@ def doctor(args):
             add("member", False, "此 clone 尚未選擇有效的成員身分。", "join --resume --person <既有ID> --topic <原topic>；新成員用 join。")
         canonical = exists(r, r.canonical)
         add("canonical", canonical, "本機有 canonical ref。" if canonical else "尚無 canonical ref。", "確認網路後 sync；未發布的初始化請 recover。")
+        named = r.git("symbolic-ref", "--quiet", "--short", "HEAD", ok=(0, 1)).returncode == 0
+        add("branch", named, "目前在具名分支。" if named else "目前是 detached HEAD，協作操作需要具名分支。",
+            "保護目前工作後，用 join --resume 恢復原個人分支。")
         dirty = bool(r.git("status", "--porcelain").stdout)
         add("working_tree", not dirty, "有未提交工作；先保護修改再執行需要 clean tree 的操作。" if dirty else "工作目錄乾淨。", warning=True)
     except GroupError as exc:
