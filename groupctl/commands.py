@@ -58,11 +58,11 @@ def join(args):
     identifier(args.person)
     identifier(args.topic)
     r.fetch()
-    from .onboarding import exists, member_at, resume_join
+    from .onboarding import exists, member_at, member_branches, resume_join
     if getattr(args, "resume", False):
         return resume_join(r, args)
     branch = f"people/{args.person}/{args.topic}"
-    if (r.meta / "members" / f"{args.person}.json").exists() or member_at(r, r.canonical, args.person) or exists(r, f"refs/remotes/{r.remote}/{branch}"):
+    if (r.meta / "members" / f"{args.person}.json").exists() or member_at(r, r.canonical, args.person) or exists(r, f"refs/remotes/{r.remote}/{branch}") or member_branches(r, args.person):
         raise GroupError("Member or personal branch exists; no new registration was created.",
                          hint=f"join --resume --person {args.person} --topic {args.topic}")
     r.git("switch", "-c", branch, r.canonical)
@@ -244,11 +244,12 @@ def inspect(args):
 
 
 def review(args):
+    from .communication import assessment_input
+    assessment = assessment_input(args, "review")
     r = repo(args)
     r.clean()
     r.fetch()
     change = r.change(args.change)
-    assessment = read_json(args.file)
     if not isinstance(assessment, dict):
         raise GroupError("Review assessment must be a JSON object")
     if assessment.get("inspected_commit") != change["commit"] or assessment.get("diff_inspected") is not True:
@@ -307,6 +308,8 @@ def integrate(args):
 
 
 def integrate_finish(args):
+    from .communication import assessment_input
+    assessment = assessment_input(args, "semantic")
     r = repo(args)
     r.clean()
     saved = read_json(r.local / "integration.json")
@@ -318,7 +321,6 @@ def integrate_finish(args):
                     ":(exclude).group", ok=(0, 1))
     if markers.returncode == 0:
         raise GroupError("Possible conflict markers remain: " + markers.stdout)
-    assessment = read_json(args.file)
     if not isinstance(assessment, dict):
         raise GroupError("Semantic assessment must be a JSON object")
     if assessment.get("reviewed_commit") != r.head or assessment.get("semantic_review") not in {"pass", "fail"} or not assessment.get("summary"):

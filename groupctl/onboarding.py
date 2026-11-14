@@ -59,12 +59,14 @@ def publish_init(args):
             "next": "已建立個人分支。用 context 開始 AI 對話、inbox 看待辦；完成程式修改後 pub --dry-run。"}
 
 
-def member_at(r, ref, person):
+def member_at(r, ref, person, foreign_ok=False):
     """Inspect exact blobs, including scope, before switching to a returning branch."""
     def blob(path):
         entry = r.output("ls-tree", ref, "--", path)
         return json.loads(r.git("cat-file", "blob", entry.split()[2], binary=True).stdout) if entry else None
     scope = blob(".group/group.json")
+    if foreign_ok and isinstance(scope, dict) and scope.get("group_id") != r.config["group_id"]:
+        return None
     if not isinstance(scope, dict) or any(scope.get(k) != r.config[k] for k in ("group_id", "protocol_version")):
         raise GroupError("既有分支不屬於目前小組；不會切換或覆寫。")
     member = blob(f".group/members/{person}.json")
@@ -74,6 +76,11 @@ def member_at(r, ref, person):
     return member
 
 
+def member_branches(r, person):
+    refs = r.output("for-each-ref", "--format=%(refname)", f"refs/remotes/{r.remote}/people/{person}/").splitlines()
+    return [ref for ref in refs if member_at(r, ref, person, foreign_ok=True)]
+
+
 def resume_join(r, args):
     branch = f"people/{args.person}/{args.topic}"
     local = "refs/heads/" + branch
@@ -81,8 +88,9 @@ def resume_join(r, args):
     has_local, has_remote = exists(r, local), exists(r, remote)
     source = local if has_local else remote if has_remote else r.canonical
     if not member_at(r, source, args.person):
+        available = member_branches(r, args.person)
         raise GroupError("找不到這個既有身分／topic，尚未切換分支。",
-                         hint="用 doctor 查看設定；指定原本的 --person 與 --topic。新成員請 join，不加 --resume。")
+                         hint="指定原本的 --person 與 --topic。已知分支：" + ", ".join(available) + "。新成員請 join，不加 --resume。")
     if has_remote and not member_at(r, remote, args.person):
         raise GroupError("遠端個人分支缺少對應的成員描述。")
     if has_local and has_remote and not (r.ancestor(local, remote) or r.ancestor(remote, local)):

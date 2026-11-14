@@ -72,6 +72,30 @@ def recover(args):
     else:
         diagnostics.append("Invalid sync cache; inspect .group/local/sync.json")
     merge = r.git("rev-parse", "--verify", "-q", "MERGE_HEAD", ok=(0, 1))
+    update_actions = []
+    if getattr(args, "update", False):
+        if offline:
+            raise GroupError("離線無法更新分支；需要成功的 fresh fetch。", hint="恢復連線後 recover --update。")
+        r.clean()
+        if integration is not None or diagnostics:
+            raise GroupError("請先處理未完成的 integration 或無效快取，再更新分支。")
+        if r.branch != r.config["canonical_branch"] and not r.branch.startswith(f"people/{r.identity()}/"):
+            raise GroupError("只能更新 canonical 或自己的個人分支。")
+        if not tip:
+            raise GroupError("遠端尚無目前分支，無法 fast-forward。", hint="檢查 recover 診斷，確認後使用 --retry-push。")
+        if not r.ancestor(r.head, tip):
+            raise GroupError("分支已分歧或含本機新提交；不會 Merge、Reset 或丟棄工作。",
+                             hint="先比較兩邊 Git history／diff，再刻意整合；不可 Force Push。")
+        scope = json.loads(r.git("show", f"{tip}:.group/group.json").stdout)
+        if not isinstance(scope, dict) or any(scope.get(key) != r.config[key] for key in ("group_id", "protocol_version", "canonical_branch")):
+            raise GroupError("遠端分支的小組設定範圍不同；不會自動更新。")
+        if r.head != tip:
+            r.git("merge", "--ff-only", tip)
+            update_actions.append("已 fast-forward 至剛 fetch 的目前分支；尚未執行測試或語意審查。")
+        else:
+            update_actions.append("目前分支已同步，不需更新。")
+        ahead = behind = 0
+    relation = "missing" if tip is None else "diverged" if ahead and behind else "ahead" if ahead else "behind" if behind else "synced"
     source_changes = False
     if r.git("show-ref", "--verify", "--quiet", r.canonical, ok=(0, 1)).returncode == 0:
         base = r.output("merge-base", "HEAD", r.canonical)
@@ -87,7 +111,14 @@ def recover(args):
         "merge_in_progress": merge.returncode == 0, "last_push_failure": receipt,
         "stale_sync_event_ids": stale, "local_state_diagnostics": diagnostics,
         "source_needs_announcement": source_changes and not announced,
-        "actions": [], "recommendations": []}
+        "remote_relation": relation, "tests_executed": False, "actions": update_actions, "recommendations": []}
+    if relation == "behind":
+        result["recommendations"].append("本機落後目前分支的遠端版本；保護未提交工作後 recover --update，只允許 fast-forward。")
+    elif relation == "diverged":
+        result["recommendations"].append("本機與遠端各有提交，已分歧；先檢查 git log HEAD...refs/remotes/" + r.remote + "/" + r.branch +
+                                         " 與 diff，再刻意整合。--update／--retry-push 都不會強制覆蓋。")
+    elif relation in {"ahead", "missing"}:
+        result["recommendations"].append("目前分支有尚未確認發布的提交；檢查內容後 recover --retry-push，重用現有提交。")
     if pending:
         result["recommendations"].append("確認後執行 recover --retry-push，重用已提交的事件 ID；不要重新 PUB 產生副本。")
     if source_changes and not announced:
@@ -128,7 +159,8 @@ def recover(args):
         if r.branch != r.config["canonical_branch"] and not r.branch.startswith(f"people/{r.identity()}/"):
             raise GroupError("Retry is restricted to canonical or your own personal branch")
         if tip and not r.ancestor(tip):
-            raise GroupError("Remote branch diverged or advanced; inspect and integrate deliberately. No force push is allowed.")
+            raise GroupError("Remote branch diverged or advanced; 不會 Force Push 或覆蓋歷史。",
+                             hint="落後時 recover --update；分歧時先比較並刻意整合兩邊歷史。")
         if r.output("log", "--full-history", "-m", "--format=", "--name-only", "--diff-filter=MD", "HEAD", "--", ".group/events/"):
             raise GroupError("Local event history contains modifications/deletions; refusing to push")
         if tip == r.head:
@@ -143,6 +175,7 @@ def recover(args):
         result["unpublished_events"] = []
         result["remote_commit"] = r.head
         result["local_ahead"] = result["local_behind"] = 0
+        result["remote_relation"] = "synced"
         result["last_push_failure_resolved"] = True if receipt else None
         result["recommendations"] = ["已確認遠端 HEAD；既有事件未重建。接著用 inbox／SYNC 查看進度。"]
         if result["source_needs_announcement"]:
@@ -157,6 +190,10 @@ def render_recovery(result):
              f"本機 commit：{result['commit']}", f"已知遠端 commit：{result['remote_commit'] or '尚無紀錄'}",
              f"可能過期：{result['freshness']['may_be_stale']}；未公開事件：{len(result['unpublished_events'])}",
              f"未提交檔案：{len(result['uncommitted_files'])}；進行中 Merge：{result['merge_in_progress']}"]
+    labels = {"missing": "遠端尚無目前分支", "ahead": "本機有待推送提交", "behind": "本機落後", "diverged": "雙方分歧", "synced": "已同步"}
+    lines.append(f"分支關係：{labels[result['remote_relation']]}；ahead {result['local_ahead']} / behind {result['local_behind']}")
+    if result.get("network_error"):
+        lines.append("網路讀取失敗，使用可能過期的本機資料：" + result["network_error"])
     lines += [f"- 待推送 {e['event_id']}: {e.get('summary', e.get('text', ''))}" for e in result["unpublished_events"]]
     if result["pending_integration"]:
         lines.append("有未完成的 integration 記錄；請依下方建議恢復。")

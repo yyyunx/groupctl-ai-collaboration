@@ -3,7 +3,7 @@ import json
 import uuid
 from pathlib import Path
 
-from .core import Repository, GroupError
+from .core import Repository, GroupError, read_json
 from .collaboration import ObservedRepository
 from .presentation import reject_secrets, safe
 
@@ -78,3 +78,28 @@ def template(args):
             stream.write("\n")
         return {"created": str(output.resolve()), "template": value, "approved": False}
     return value
+
+
+def assessment_input(args, kind):
+    """Inline flags are explicit attestations, with the same downstream checks as JSON."""
+    fields = ("verdict", "inspected_commit", "diff_inspected", "summary", "issue", "test_run", "evidence") if kind == "review" else (
+        "semantic_review", "reviewed_commit", "build", "summary", "resolution")
+    file = getattr(args, "file", None)
+    if file:
+        if any(getattr(args, key, None) for key in fields):
+            raise GroupError("請選 --file 或 inline assessment flags，不能混用。", code=2)
+        return read_json(file)
+    required = ("verdict", "inspected_commit", "summary") if kind == "review" else ("semantic_review", "reviewed_commit", "build", "summary", "resolution")
+    missing = [key for key in required if not isinstance(getattr(args, key, None), str) or not getattr(args, key).strip()]
+    if missing or (kind == "review" and not getattr(args, "diff_inspected", False)):
+        raise GroupError("請明確提供實際 assessment、完整 commit 和 summary；Review 還須 --diff-inspected。", code=2,
+                         hint="review --help 或 integrate-finish --help；不會替你預設 Pass。")
+    if kind == "review":
+        result = {"verdict": args.verdict, "inspected_commit": args.inspected_commit, "diff_inspected": True,
+                  "summary": args.summary, "issues": getattr(args, "issue", []), "tests_run": getattr(args, "test_run", []),
+                  "evidence": getattr(args, "evidence", [])}
+    else:
+        result = {"semantic_review": args.semantic_review, "reviewed_commit": args.reviewed_commit,
+                  "build": args.build, "summary": args.summary, "conflict_resolution_summary": args.resolution}
+    reject_secrets(result)
+    return result
