@@ -189,6 +189,9 @@ class StudentDailyWorkflowTests(GitFixture):
         event = json.loads(result.stdout)["event"]
         self.assertEqual(event["result"], "failed")
         self.assertEqual(event["verification"], {"build": "not_applicable", "tests": "pass", "semantic_review": "fail"})
+        failure = next(t for t in view(self.b)["tasks"] if t["kind"] == "failed_integration")
+        self.assertEqual(failure["event_id"], event["event_id"])
+        self.assertEqual(failure["command"], ["trace", change["change_id"]])
 
     def test_inline_assessments_refuse_mixed_json_and_secrets_before_publication(self):
         args = argparse.Namespace(file="unused.json", verdict="accept")

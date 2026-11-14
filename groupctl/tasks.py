@@ -39,6 +39,14 @@ def attention(r, events, view):
     for event in unresolved_blockers(events):
         add("blocker", event, event["requested_action"], ["resolve", event["event_id"], "--reason", "<實際解決理由與證據>"],
             requires_input=True, shared=True)
+    integrations = {}
+    for event in events:
+        if event["event_type"] == "integration_result":
+            integrations[(event["change_id"], event["target_branch"])] = event
+    for event in integrations.values():
+        if event["result"] != "success" and event["event_id"] not in resolved and (
+                event["person_id"] == person or event["target_branch"] == view["branch"]):
+            add("failed_integration", event, "整合驗證尚未通過：先讀失敗證據，修正後重新 INT 與 assessment。", ["trace", event["change_id"]])
     if view["pending_integration"]:
         add("finish_integration", view["pending_integration"], "整合尚未完成：實際檢查語意，再提交精確 HEAD 的 assessment。", ["template", "semantic"])
     if view["unpublished_events"]:
