@@ -62,7 +62,10 @@ def main():
         assert provenance["tag"] == args.tag
         head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
         assert provenance["commit"] == head, "Artifacts were built from another commit"
-    hashes = "".join(f"{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}\n" for p in sorted(archives + [provenance_path]))
+    # pathlib ordering is case-insensitive on Windows, case-sensitive on POSIX.
+    # Sort filename strings explicitly so the manifest is identical on both.
+    hashes = "".join(f"{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}\n"
+                     for p in sorted(archives + [provenance_path], key=lambda p: p.name))
     checksum = args.dist / "SHA256SUMS"
     if args.verify:
         assert checksum.read_text(encoding="utf-8") == hashes, "Artifact checksum mismatch"
