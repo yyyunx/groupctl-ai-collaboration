@@ -1,0 +1,63 @@
+{
+  "base": "0c74f164dceedd6c994b52eeaad6d24b00065c04",
+  "method": "Exact blobs and >=6 contiguous nonblank whitespace-normalized lines totaling >=240 characters; compare same file suffix, excluding .group and evidence. Similarity does not establish copying or permission. No third-party source excerpts emitted.",
+  "references": [
+    {
+      "name": "group1",
+      "commit": "8713dd786b552d6d64f4f7123cb64c9d3b013c2c",
+      "files_examined": 29,
+      "license_paths": [],
+      "exact_files": [
+        {
+          "base_path": "spec/00_group_collaboration_assignment.md",
+          "reference_path": "specs/00_group_collaboration_assignment.md",
+          "sha256": "451e5d55bcf60750653e0b700915c8d571107f8f1994182497ca734c170d9524"
+        },
+        {
+          "base_path": "spec/01_architecture_and_workflow.md",
+          "reference_path": "specs/01_architecture_and_workflow.md",
+          "sha256": "ba0e36ad64afb21008a034f8150bfb00991dfd29d3f672955f3d740732abdde5"
+        },
+        {
+          "base_path": "spec/02_repository_contract.md",
+          "reference_path": "specs/02_repository_contract.md",
+          "sha256": "0d0b3d68ab85b567e7e182250cd3669c3f04bdaf71c28df75d6270eca34617dc"
+        },
+        {
+          "base_path": "spec/03_event_format_contract.md",
+          "reference_path": "specs/03_event_format_contract.md",
+          "sha256": "ca2eabe3f1d793151717410a980aa4c8c7adfda65bfdf658eca4494985b57bee"
+        },
+        {
+          "base_path": "spec/04_command_reference.md",
+          "reference_path": "specs/04_command_reference.md",
+          "sha256": "e2ecd5b5f8d18574582225c66e553a5299f60bd14d617dd801cf0a2478e571df"
+        },
+        {
+          "base_path": "spec/05_command_procedures.md",
+          "reference_path": "specs/05_command_procedures.md",
+          "sha256": "83f974ae5840d7617bd722e9c88d3e4ed49a317bf1a0270691d3763bc20c0502"
+        },
+        {
+          "base_path": "spec/06_agent_behavior_specification.md",
+          "reference_path": "specs/06_agent_behavior_specification.md",
+          "sha256": "89d6bd09822ae709a4bd6dfa67a3342d42a95e35b4126630e28ee17c064566bb"
+        },
+        {
+          "base_path": "spec/07_testing_and_finalization.md",
+          "reference_path": "specs/07_testing_and_finalization.md",
+          "sha256": "94f6ec0eae423ea23e55a20f9865073e21e512cdeb5b587070957baab5b9c959"
+        }
+      ],
+      "matching_blocks": []
+    },
+    {
+      "name": "group2",
+      "commit": "30da54a549fce80cbdbabc24bd355f16d3c68fe4",
+      "files_examined": 11,
+      "license_paths": [],
+      "exact_files": [],
+      "matching_blocks": []
+    }
+  ]
+}

@@ -1,0 +1,90 @@
+name: Verify exact distribution revision
+
+on:
+  workflow_call:
+    inputs:
+      revision:
+        required: true
+        type: string
+      tag:
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.revision }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - name: Version and exact tag
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        shell: bash
+        run: |
+          if [ -n "$RELEASE_TAG" ]; then
+            python scripts/check_version.py --tag "$RELEASE_TAG"
+          else
+            python scripts/check_version.py
+          fi
+      - run: python -m pip install build twine
+      - run: python -m build
+      - run: python -m twine check dist/*
+      - name: Inspect wheel, sdist and checksums
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        shell: bash
+        run: |
+          if [ -n "$RELEASE_TAG" ]; then
+            python scripts/check_artifacts.py --tag "$RELEASE_TAG"
+          else
+            python scripts/check_artifacts.py
+          fi
+      - uses: actions/upload-artifact@v6
+        with:
+          name: groupctl-dist
+          path: dist/
+          if-no-files-found: error
+          retention-days: 30
+
+  verify:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ['3.10', '3.13']
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    env:
+      PYTHONUTF8: '1'
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.revision }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Full unit, integration and regression suite
+        run: python -m unittest discover -s tests -v
+      - name: Existing fifteen-step collaboration acceptance
+        run: python scripts/demo.py
+      - uses: actions/download-artifact@v7
+        with:
+          name: groupctl-dist
+          path: dist
+      - run: python scripts/check_artifacts.py --verify
+      - name: Fresh wheel and sdist installations outside the source repository
+        run: python scripts/installed_smoke.py
