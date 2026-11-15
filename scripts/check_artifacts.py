@@ -27,8 +27,12 @@ def check(directory):
         entries = archive.read(next(n for n in names if n.endswith(".dist-info/entry_points.txt"))).decode()
         assert "groupctl = groupctl.__main__:main" in entries
         for path in required:
-            expected = (ROOT / "groupctl/agent_data" / path).read_bytes()
-            assert archive.read("groupctl/agent_data/" + path) == expected, path
+            # The same Ubuntu-built wheel is verified on Windows checkouts,
+            # where Git may use CRLF. Compare Markdown content independently
+            # of checkout newlines; archive bytes are protected by SHA256SUMS.
+            expected = (ROOT / "groupctl/agent_data" / path).read_text(encoding="utf-8")
+            actual = archive.read("groupctl/agent_data/" + path).decode("utf-8").replace("\r\n", "\n")
+            assert actual == expected, path
         assert not any(".group/" in n or "/tests/" in n or "/evidence/" in n for n in names)
     with tarfile.open(sources[0]) as archive:
         names = archive.getnames()
