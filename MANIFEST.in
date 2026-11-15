@@ -1,0 +1,7 @@
+include README.md CHANGELOG.md AGENT_COLLABORATION.md AGENTS.md CLAUDE.md GEMINI.md
+recursive-include groupctl/agent_data *.md
+recursive-include .agents/skills/group-collaboration *.md
+recursive-include tests *.py
+recursive-include scripts *.py
+recursive-include docs *.md *.json
+recursive-include spec *.md

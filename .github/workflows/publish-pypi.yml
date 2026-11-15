@@ -1,0 +1,83 @@
+name: Publish approved release to PyPI
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Published GitHub release tag with exact-tag verification
+        required: true
+        type: string
+      confirmation:
+        description: Type PUBLISH followed by a space and the exact tag
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-pypi
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: github.ref == 'refs/heads/main' && vars.PYPI_PUBLISH_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - name: Validate approval and repository licensing gate
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          test "$CONFIRMATION" = "PUBLISH $RELEASE_TAG"
+          python -c 'import json; assert json.load(open("docs/publishing-state.json"))["redistribution_approved"] is True, "Licensing is not approved"'
+          git checkout --detach "refs/tags/$RELEASE_TAG"
+          git merge-base --is-ancestor HEAD origin/main
+          python scripts/check_version.py --tag "$RELEASE_TAG"
+          python -c 'import json; assert json.load(open("docs/publishing-state.json"))["redistribution_approved"] is True, "Tagged source has not cleared licensing"'
+      - name: Download verified release assets; never rebuild
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft)" = false
+          gh release download "$RELEASE_TAG" --dir dist --pattern '*.whl' --pattern '*.tar.gz' --pattern SHA256SUMS --pattern RELEASE-PROVENANCE.json
+          python scripts/check_artifacts.py --verify --tag "$RELEASE_TAG"
+          run_id=$(python -c 'import json; print(json.load(open("dist/RELEASE-PROVENANCE.json"))["run_id"])')
+          test "$(gh api "repos/$GH_REPO/actions/runs/$run_id" --jq .conclusion)" = success
+          test "$(gh api "repos/$GH_REPO/actions/runs/$run_id" --jq .path)" = .github/workflows/prepare-release.yml
+          mkdir packages
+          cp dist/*.whl dist/*.tar.gz packages/
+      - uses: actions/upload-artifact@v6
+        with:
+          name: pypi-approved-distributions
+          path: packages/
+          if-no-files-found: error
+
+  publish:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/groupctl/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: pypi-approved-distributions
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1

@@ -1,6 +1,6 @@
 # Portable group collaboration instructions — protocol 0.1
 
-Apply these instructions when the human requests collaboration in a repository containing `.group/group.json`. They supplement, and do not replace, the eight authoritative documents in `spec/`. The uppercase commands are human-to-agent prompt shorthand, not terminal commands. Invoke `python -m groupctl --repo <repository> ...` from the installed/source tool, or the included PowerShell launcher. Do not require any particular AI vendor.
+Apply these instructions when the human requests collaboration in a repository containing `.group/group.json`. They supplement the target project's requirements and safety rules. The tool's protocol specification is available in its source repository; target projects do not need to clone it. The uppercase commands are human-to-agent prompt shorthand, not terminal commands. Invoke the installed `groupctl --repo <repository> ...` CLI or `python -m groupctl --repo <repository> ...`. Do not require any particular AI vendor.
 
 ## Boundaries and facts
 

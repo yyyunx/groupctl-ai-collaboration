@@ -1,6 +1,6 @@
 # groupctl：人與 AI 的 Git 協作工具
 
-**Group 3 — yyyunx，protocol 0.1，工具版本 0.3.1。**
+**Group 3 — yyyunx，protocol 0.1，工具版本 0.3.2。**
 每位學生與自己的 AI 在各自電腦上開發，透過同一個 GitHub repository
 發布、審查、整合與測試，最後形成一份共同成果。這個工具不會啟動三個 AI，
 也不需要 OpenAI／Gemini API。AI 提供判斷，groupctl 執行機械操作並留下證據。
@@ -17,37 +17,98 @@
 
 ## 安裝與第一次執行
 
-需要 **Git、Python 3.10 以上**。核心程式沒有第三方 runtime dependency。
+需要 **Git、Python 3.10 以上**；建議以 pipx 隔離安裝。核心程式沒有第三方
+runtime dependency，也不需要 AI API Key。安裝後可在任意目錄執行，不必 clone 工具原始碼。
+
+**v0.3.2 目前是發布準備／Draft，尚未上傳 PyPI；來源與貢獻者權利待確認，沒有新增授權。
+以下 GitHub 下載網址需等維護者核准並 Publish Release 後才會公開可用。**
+審閱者現在可從 Draft／Actions 下載 wheel，將安裝參數換成本機檔案的完整路徑。
+詳見 [來源與授權檢查](docs/LICENSING_REVIEW.md)、[發布狀態與維護者設定](docs/RELEASING.md)。
+
+### Windows（PowerShell）
+
+先安裝 Python 與 Git，確認 `py --version`、`git --version` 可用：
 
 ```powershell
-git clone https://github.com/yyyunx/groupctl-ai-collaboration.git
-cd groupctl-ai-collaboration
-.\run.ps1 --help
-.\run.ps1 --version
+py -m pip install --user pipx
+py -m pipx ensurepath
+# 關閉並重開終端機，讓 PATH 生效
+pipx install "https://github.com/yyyunx/groupctl-ai-collaboration/releases/download/v0.3.2/groupctl-0.3.2-py3-none-any.whl"
+groupctl --version
 ```
 
-Windows 啟動器會尋找 Python 或 py launcher；也可指定：
+### Ubuntu / Linux
+
+```bash
+sudo apt update
+sudo apt install git python3 python3-venv pipx
+pipx ensurepath
+# 關閉並重開終端機
+pipx install "https://github.com/yyyunx/groupctl-ai-collaboration/releases/download/v0.3.2/groupctl-0.3.2-py3-none-any.whl"
+groupctl --version
+```
+
+### pip / venv 與未來 PyPI
+
+不用 pipx 時，建立虛擬環境後安裝下載的 wheel（不需啟用 PowerShell scripts）：
 
 ```powershell
-$env:GROUPCTL_PYTHON = "C:\你的Python路徑\python.exe"
-.\run.ps1 --version
+py -m venv .venv-groupctl
+.\.venv-groupctl\Scripts\python.exe -m pip install "C:\Downloads\groupctl-0.3.2-py3-none-any.whl"
+.\.venv-groupctl\Scripts\groupctl.exe --version
 ```
 
-跨平台直接執行，或安裝為 CLI：
+Linux 改用 `python3 -m venv .venv-groupctl` 及 `.venv-groupctl/bin/python -m pip install /path/to/wheel`。
+要用短指令，可啟用該 venv 或將其執行檔目錄加入 PATH。不要對系統 Python 使用 sudo pip
+或繞過 externally-managed-environment 保護。
 
-```text
-python -m groupctl --help
-python -m pip install -e .
-groupctl --help
-```
+**只有未來完成授權並正式上傳 PyPI 後**，才可使用 `pipx install groupctl` 或
+在 venv 中 `python -m pip install groupctl`。2026-11-15 PyPI 官方 JSON API 對
+groupctl 回傳 404；名稱未被保留，正式發布前必須再確認，CLI 名稱始終為 groupctl。
 
-下文的 python 代表實際的 Python 3.10+ 執行檔；有些系統名稱為 python3。
-使用 launcher 不需要 pip 安裝。
+### 更新與解除安裝
+
+- GitHub wheel 安裝：下載並核對新版本 SHA256，執行 `pipx install --force /path/to/new-version.whl`。
+- 未來 PyPI 安裝：`pipx upgrade groupctl`；venv 使用 `python -m pip install --upgrade groupctl`。
+- pipx 解除安裝：`pipx uninstall groupctl`；venv 使用該環境的 `python -m pip uninstall groupctl`。
+- 更新 Python package 不會自動修改各專案的 Agent 設定；重新執行 agent-setup --dry-run 檢查。
+- 解除安裝保留專案資料、Agent 指令與備份；請先檢查／合併自己的內容，再自行移除不需要的檔案。
+
+Release 同時提供 wheel、sdist、SHA256SUMS 與 RELEASE-PROVENANCE.json。
+Windows 可用 `Get-FileHash .\groupctl-0.3.2-py3-none-any.whl -Algorithm SHA256`，
+Linux 可用 `sha256sum -c SHA256SUMS`（先下載清單列出的所有檔案）。
+SHA256 用於比對下載完整性；精確來源 commit／驗證 run 另見 provenance 與 Actions。
+
+開發者仍可 clone 後使用 `python -m pip install -e .`、`python -m groupctl` 或 run.ps1；
+Windows launcher 支援 GROUPCTL_PYTHON。這不是一般使用者安裝的必要步驟。
 
 ## 讓自己的 AI 使用
 
-請 AI 讀取 `AGENTS.md` 與 `AGENT_COLLABORATION.md`。
-Claude／Gemini 亦有 `CLAUDE.md`、`GEMINI.md` 入口。
+先將套件內附的指令與 Skill 安裝到**小組專案**（相對路徑以目前目錄為準，不依賴 --repo）：
+
+```text
+groupctl agent-setup --target /path/to/team-project --dry-run
+groupctl agent-setup --target /path/to/team-project
+```
+
+預設支援全部三種 Agent；也可選 `--agent codex`、`--agent claude`、`--agent gemini`
+並重複指定。預覽輸出 JSON 含每個檔案的路徑、內容與 create/unchanged/conflict。
+相同內容重複安裝不會寫入；任何衝突預設停止全部寫入（exit 2），保留既有設定。
+可手動合併所需指令；確實要取代時先檢查預覽，再明確執行：
+
+```text
+groupctl agent-setup --target /path/to/team-project --overwrite --confirm
+```
+
+每份被取代的原檔會以 `.groupctl-backup-唯一ID` 保留；不跟隨符號連結／Windows junction。
+不要將可能含私人內容的備份直接提交 Git。目標可以尚未建立，也不必已是 Git repo。
+安裝只寫指令檔，不安裝／登入 AI、不變更 Git，也不產生小組身分。
+
+產物包含 AGENT_COLLABORATION.md 及所選 Agent 的 AGENTS.md／CLAUDE.md／GEMINI.md。
+Codex 使用 `.agents/skills/group-collaboration/`；Claude 使用 `.claude/skills/group-collaboration/`；
+Gemini 使用 `.gemini/skills/group-collaboration/`，各含完整 references。
+共用 `.agents` 路徑也會保留，所有資料直接來自已安裝 Python package。
+重新開啟 Agent 對話，讓它讀取新設定；舊版 Agent 可明確讀取 AGENT_COLLABORATION.md。
 
 例如對能讀檔、執行終端機的 AI 說：
 
@@ -58,7 +119,9 @@ Claude／Gemini 亦有 `CLAUDE.md`、`GEMINI.md` 入口。
 可攜 Skill 位於 `.agents/skills/group-collaboration/`，包含 SKILL.md 與內部 references。
 可供支援 Agent Skills 的工具載入，也可讓 AI 明確讀取 SKILL.md。
 安裝 Skill 不會自動安裝 Python package；兩者都要可用。
-Skill 格式及 Codex discovery 見 [官方說明](https://learn.chatgpt.com/docs/build-skills)。
+Skill discovery 見 [Codex 官方說明](https://learn.chatgpt.com/docs/build-skills)、
+[Claude Code 官方說明](https://code.claude.com/docs/en/skills)、
+[Gemini CLI 官方說明](https://geminicli.com/docs/cli/skills/)。
 
 已設定好目標專案後，每次開新 Codex／Gemini／Claude 對話，可把
 `groupctl context --format markdown` 的實際輸出交給 AI，請它先讀 tasks 與 inbox。
@@ -68,14 +131,24 @@ Context 現在附目標路徑、command_prefix、dirty 檔案、精簡操作規�
 ## 建立小組：第一位成員
 
 以下假設另一個 team-project 已有 main、應用程式與真正的 tests，且已設定 origin。
-先在工具目錄執行。把 assignment.md 換成真實需求；examples 只作為格式範例。
+在小組專案目錄執行。先將真實需求寫入並提交 assignment.md；不需要工具 repo 的 examples。
 目標專案要有 initial commit、origin，且工作目錄乾淨；既有遠端 main 必須已同步。
 
-```powershell
-.\run.ps1 --repo ..\team-project doctor
-.\run.ps1 --repo ..\team-project init --group G01 --person P17 --name "同學 A" --assignment .\examples\assignment.md --checks unittest --publish
-.\run.ps1 --repo ..\team-project status --format text
+```text
+git clone https://github.com/YOUR-TEAM/team-project.git
+cd team-project
+groupctl doctor
+groupctl init --group G01 --person P17 --name "同學 A" --assignment assignment.md --checks unittest --publish
+groupctl agent-setup --target . --dry-run
+groupctl agent-setup --target .
+groupctl context --format markdown
+groupctl inbox
 ```
+
+初始化前 doctor 缺少小組設定時回傳 2 是預期診斷。建立 Agent 指令後，請檢查並明確提交
+產生的設定檔到小組的個人分支，依原協作流程發布；不要為了 clean tree 丟掉自己的設定。
+其他成員若已 clone 到共享指令，不必重新安裝；需要時 agent-setup 可安全重複執行。
+從其他目錄操作時，在 subcommand 前加 `groupctl --repo /path/to/team-project ...`。
 
 `init --publish` 只提交 .group、推送 canonical，然後建立 people/P17/work，一個指令取代手動 Git 步驟。
 失敗時不要重做 init：用 recover 查看已提交內容，必要時 recover --retry-push。
@@ -283,6 +356,11 @@ CI 在 Ubuntu／Windows 執行完整 suite、Demo、package 安裝 smoke。
 | 情況 | 做法 |
 |---|---|
 | 找不到 Python | 安裝 3.10+，或設定 GROUPCTL_PYTHON；不需安裝 AI API SDK |
+| 找不到 groupctl | pipx ensurepath 後重開終端機；pipx list 檢查，或使用 venv 中的完整執行檔路徑 |
+| PyPI 找不到 groupctl／GitHub wheel 404 | 目前尚未正式發布；審閱者下載 Draft／Actions artifact，不要把同名第三方套件當成本工具 |
+| externally-managed-environment | 使用 pipx 或 venv，避免 sudo pip 與 --break-system-packages |
+| agent-setup 有 conflicts（exit 2） | 沒有寫入任何檔案；讀 dry-run 內容並手動合併，或明確 --overwrite --confirm 並保留備份 |
+| Agent 沒看到新 Skill | 在 target 專案重新開啟 Agent；確認所選 Agent 目錄，或直接請它讀 AGENT_COLLABORATION.md |
 | not a git repository／沒有 .group | 指向正確 team clone；第一位 init，其他成員先 clone |
 | working tree is not clean | 先保護並整理未完成修改；工具不會自動丟棄 dirty work |
 | push 被拒絕／NOT published | 檢查權限與網路、fetch 並處理分歧後重試 push；不可 force push |

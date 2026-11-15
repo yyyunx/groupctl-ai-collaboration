@@ -7,7 +7,7 @@ from . import commands
 from .core import GroupError
 from .status import render_status
 from . import __version__
-from . import collaboration, communication, recovery, onboarding
+from . import collaboration, communication, recovery, onboarding, agent_setup
 from .presentation import safe
 from .events import EVENT_FIELDS
 
@@ -31,6 +31,13 @@ def parser():
         sub = subs.add_parser(name, help=help)
         sub.set_defaults(function=function)
         return sub
+
+    sub = command("agent-setup", agent_setup.setup, "Install packaged instructions and skills into a project; no clone or API key needed")
+    sub.add_argument("--target", required=True, help="Project directory (relative to the current working directory)")
+    sub.add_argument("--agent", action="append", choices=("codex", "claude", "gemini"), help="Repeat to select agents; default: all three")
+    sub.add_argument("--dry-run", "--preview", dest="dry_run", action="store_true", help="Show paths, contents and conflicts without creating files")
+    sub.add_argument("--overwrite", action="store_true", help="Replace conflicting regular files after backing them up; requires --confirm")
+    sub.add_argument("--confirm", action="store_true", help="Explicitly confirm the requested overwrite after reviewing --dry-run")
 
     sub = command("init", commands.init, "Create .group configuration without committing unrelated files")
     for name in ("group", "person", "assignment"):
