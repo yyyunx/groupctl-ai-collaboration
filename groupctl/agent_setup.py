@@ -29,7 +29,9 @@ def payloads(agents):
 def checked_path(target, relative):
     """Reject links, Windows junctions/reparse points and non-directory ancestors."""
     path = target / relative
-    for part in (path, *path.parents):
+    # Inspect ancestors before children: POSIX lstat(child) raises ENOTDIR when
+    # an ancestor is a regular file; it must remain a structured preflight error.
+    for part in (*reversed(path.parents), path):
         try:
             info = part.lstat()
         except FileNotFoundError:
