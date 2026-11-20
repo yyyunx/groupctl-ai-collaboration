@@ -1,6 +1,7 @@
 """Check single-source version, release documents, and an optional exact Git tag."""
 import argparse
 import ast
+import json
 import re
 import subprocess
 from pathlib import Path
@@ -22,6 +23,12 @@ def check(tag=None):
     assert f"工具版本 {value}" in (ROOT / "README.md").read_text(encoding="utf-8")
     assert f"## [{value}]" in (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     assert (ROOT / f"docs/releases/v{value}.md").is_file()
+    assert 'license = "MIT"' in project and 'license-files = ["LICENSE"]' in project
+    state = json.loads((ROOT / "docs/publishing-state.json").read_text(encoding="utf-8"))
+    assert state["redistribution_approved"] is True and state["license"] == "MIT"
+    assert state["github_publication_approved"] is True
+    for item in state["excluded_material"]:
+        assert not (ROOT / item).exists(), f"Uncleared document is still present: {item}"
     if tag:
         assert tag == "v" + value, f"Tag {tag!r} does not match package {value}"
         def git(*args):

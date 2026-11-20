@@ -1,5 +1,7 @@
 # Group Collaboration System — Final Synthesis
 
+> Historical report for the pre-v0.3.3 snapshots. The course specifications described here are excluded from v0.3.3; see LICENSING_REVIEW.md. This report does not grant rights to historical third-party materials.
+
 ## Base Selection
 
 **Group 3 — yyyunx**, base commit [f36cc8c](https://github.com/yyyunx/groupctl-ai-collaboration/commit/f36cc8c18fac68c5a3aeee05469aaee713b3a267)。

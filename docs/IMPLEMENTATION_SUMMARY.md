@@ -1,5 +1,7 @@
 # Implementation Summary
 
+> Historical report for the pre-v0.3.3 snapshots. The course specifications described here are excluded from v0.3.3; see LICENSING_REVIEW.md. This report does not grant rights to historical third-party materials.
+
 Base：Group 3 — yyyunx，`f36cc8c18fac68c5a3aeee05469aaee713b3a267`。
 CLI 名稱與 protocol 0.1 保留，package 版本提升為 0.2.0。
 

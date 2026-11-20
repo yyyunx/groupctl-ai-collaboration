@@ -9,6 +9,8 @@ description = "Vendor-neutral Git group collaboration helper, protocol 0.1"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = []
+license = "MIT"
+license-files = ["LICENSE"]
 keywords = ["git", "collaboration", "students", "agents", "cli"]
 classifiers = [
   "Development Status :: 4 - Beta",
@@ -18,8 +20,7 @@ classifiers = [
   "Operating System :: OS Independent",
   "Topic :: Software Development :: Version Control :: Git",
 ]
-# License intentionally unspecified: see docs/LICENSING_REVIEW.md.
-# Do not infer a redistribution grant from public repository visibility.
+# Scope and excluded historical teaching materials: docs/LICENSING_REVIEW.md.
 
 [project.urls]
 Homepage = "https://github.com/yyyunx/groupctl-ai-collaboration"

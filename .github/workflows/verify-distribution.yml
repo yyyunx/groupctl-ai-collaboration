@@ -39,15 +39,17 @@ jobs:
       - run: python -m pip install build twine
       - run: python -m build
       - run: python -m twine check dist/*
+      - name: Inspect the same source tree exported by GitHub source archives
+        run: git archive --format=zip --output=source-release.zip HEAD
       - name: Inspect wheel, sdist and checksums
         env:
           RELEASE_TAG: ${{ inputs.tag }}
         shell: bash
         run: |
           if [ -n "$RELEASE_TAG" ]; then
-            python scripts/check_artifacts.py --tag "$RELEASE_TAG"
+            python scripts/check_artifacts.py --tag "$RELEASE_TAG" --source-archive source-release.zip
           else
-            python scripts/check_artifacts.py
+            python scripts/check_artifacts.py --source-archive source-release.zip
           fi
       - uses: actions/upload-artifact@v6
         with:
