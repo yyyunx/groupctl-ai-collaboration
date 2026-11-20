@@ -41,10 +41,12 @@ jobs:
           [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
           test "$CONFIRMATION" = "PUBLISH $RELEASE_TAG"
           python -c 'import json; assert json.load(open("docs/publishing-state.json"))["redistribution_approved"] is True, "Licensing is not approved"'
+          python -c 'import json; assert json.load(open("docs/publishing-state.json"))["pypi_publication_approved"] is True, "PyPI publication is not authorized"'
           git checkout --detach "refs/tags/$RELEASE_TAG"
           git merge-base --is-ancestor HEAD origin/main
           python scripts/check_version.py --tag "$RELEASE_TAG"
           python -c 'import json; assert json.load(open("docs/publishing-state.json"))["redistribution_approved"] is True, "Tagged source has not cleared licensing"'
+          python -c 'import json; assert json.load(open("docs/publishing-state.json"))["pypi_publication_approved"] is True, "Tagged source has no PyPI publication approval"'
       - name: Download verified release assets; never rebuild
         env:
           GH_TOKEN: ${{ github.token }}

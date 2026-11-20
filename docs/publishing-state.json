@@ -1,5 +1,21 @@
 {
-  "redistribution_approved": false,
-  "license": null,
-  "reason": "Owner requested source and contributor-rights review before choosing a license or publishing. See LICENSING_REVIEW.md."
+  "redistribution_approved": true,
+  "license": "MIT",
+  "copyright": "2026 yyyunx",
+  "github_publication_approved": true,
+  "pypi_publication_approved": false,
+  "approved_by": "yyyunx",
+  "approval_date": "2026-11-20",
+  "approval_basis": "Owner explicitly confirmed ownership of project code and own writing, selected MIT, authorized v0.3.3 GitHub publication after checks, and withheld PyPI publication.",
+  "excluded_material": [
+    "spec/00_group_collaboration_assignment.md",
+    "spec/01_architecture_and_workflow.md",
+    "spec/02_repository_contract.md",
+    "spec/03_event_format_contract.md",
+    "spec/04_command_reference.md",
+    "spec/05_command_procedures.md",
+    "spec/06_agent_behavior_specification.md",
+    "spec/07_testing_and_finalization.md"
+  ],
+  "scope": "Current v0.3.3 code, independently authored documentation, tests and Agent Skills. Original course specifications are removed from this tree and excluded from distributions. No grant to third-party historical content or retroactive relicensing of v0.3.2 artifacts."
 }

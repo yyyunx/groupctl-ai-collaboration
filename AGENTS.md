@@ -1,8 +1,10 @@
 # Group 3 development and collaboration
 
 This repository provides the `groupctl` Python package. Preserve its package,
-existing CLI command names and protocol 0.1. Do not edit the original `spec/`
-assignment documents to accommodate an implementation.
+existing CLI command names and protocol 0.1. The original course specifications
+are excluded from v0.3.3 for unconfirmed redistribution rights; do not restore them
+or copy their text into release files. Use docs/PROTOCOL_OVERVIEW.md and the tests
+for the independently documented implemented behavior. Preserve historical tags.
 
 For a managed target containing `.group/group.json`, read
 `AGENT_COLLABORATION.md` and `.agents/skills/group-collaboration/SKILL.md` before

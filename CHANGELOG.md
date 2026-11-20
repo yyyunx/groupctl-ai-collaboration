@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.3] — 2026-11-20
+
+- MIT License for owner-confirmed project code and independently authored content;
+  copyright 2026 yyyunx, SPDX metadata and license text in both Python archives.
+- Exclude the eight uncleared course specification documents from the current tree,
+  wheel, sdist and GitHub source archives. Preserve Git history and v0.3.2 unchanged.
+- Add an independently written protocol overview and automated filename/content
+  exclusion checks, including negative regression cases for renamed material.
+- Update public GitHub installation instructions and version-consistent release notes.
+- Preserve all CLI commands, protocol 0.1 and Codex/Claude/Gemini Agent Skills.
+- Keep complete Ubuntu/Windows Python 3.10/3.13 validation and exact-tag draft gating.
+- Authorize GitHub publication after successful checks; explicitly keep PyPI disabled.
+
 ## [0.3.2] — Release preparation
 
 - Single-source package/CLI version, README and project URL metadata; Python 3.10+.

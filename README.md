@@ -1,6 +1,6 @@
 # groupctl：人與 AI 的 Git 協作工具
 
-**Group 3 — yyyunx，protocol 0.1，工具版本 0.3.2。**
+**Group 3 — yyyunx，protocol 0.1，工具版本 0.3.3。**
 每位學生與自己的 AI 在各自電腦上開發，透過同一個 GitHub repository
 發布、審查、整合與測試，最後形成一份共同成果。這個工具不會啟動三個 AI，
 也不需要 OpenAI／Gemini API。AI 提供判斷，groupctl 執行機械操作並留下證據。
@@ -20,10 +20,11 @@
 需要 **Git、Python 3.10 以上**；建議以 pipx 隔離安裝。核心程式沒有第三方
 runtime dependency，也不需要 AI API Key。安裝後可在任意目錄執行，不必 clone 工具原始碼。
 
-**v0.3.2 目前是發布準備／Draft，尚未上傳 PyPI；來源與貢獻者權利待確認，沒有新增授權。
-以下 GitHub 下載網址需等維護者核准並 Publish Release 後才會公開可用。**
-審閱者現在可從 Draft／Actions 下載 wheel，將安裝參數換成本機檔案的完整路徑。
-詳見 [來源與授權檢查](docs/LICENSING_REVIEW.md)、[發布狀態與維護者設定](docs/RELEASING.md)。
+v0.3.3 的程式碼、Agent Skills 與自行撰寫的文件採用 [MIT License](LICENSE)，Copyright 2026 yyyunx。
+從 [GitHub Release v0.3.3](https://github.com/yyyunx/groupctl-ai-collaboration/releases/tag/v0.3.3)
+下載安裝檔即可使用；本版透過 GitHub 發布，沒有上傳 PyPI。
+八份權利未確認的課程規格已移出本版檔案樹與正式散布內容；MIT 不涵蓋那些歷史文件。
+詳見 [來源與授權範圍](https://github.com/yyyunx/groupctl-ai-collaboration/blob/v0.3.3/docs/LICENSING_REVIEW.md)。
 
 ### Windows（PowerShell）
 
@@ -33,7 +34,7 @@ runtime dependency，也不需要 AI API Key。安裝後可在任意目錄執行
 py -m pip install --user pipx
 py -m pipx ensurepath
 # 關閉並重開終端機，讓 PATH 生效
-pipx install "https://github.com/yyyunx/groupctl-ai-collaboration/releases/download/v0.3.2/groupctl-0.3.2-py3-none-any.whl"
+pipx install "https://github.com/yyyunx/groupctl-ai-collaboration/releases/download/v0.3.3/groupctl-0.3.3-py3-none-any.whl"
 groupctl --version
 ```
 
@@ -44,7 +45,7 @@ sudo apt update
 sudo apt install git python3 python3-venv pipx
 pipx ensurepath
 # 關閉並重開終端機
-pipx install "https://github.com/yyyunx/groupctl-ai-collaboration/releases/download/v0.3.2/groupctl-0.3.2-py3-none-any.whl"
+pipx install "https://github.com/yyyunx/groupctl-ai-collaboration/releases/download/v0.3.3/groupctl-0.3.3-py3-none-any.whl"
 groupctl --version
 ```
 
@@ -54,7 +55,7 @@ groupctl --version
 
 ```powershell
 py -m venv .venv-groupctl
-.\.venv-groupctl\Scripts\python.exe -m pip install "C:\Downloads\groupctl-0.3.2-py3-none-any.whl"
+.\.venv-groupctl\Scripts\python.exe -m pip install "C:\Downloads\groupctl-0.3.3-py3-none-any.whl"
 .\.venv-groupctl\Scripts\groupctl.exe --version
 ```
 
@@ -62,9 +63,9 @@ Linux 改用 `python3 -m venv .venv-groupctl` 及 `.venv-groupctl/bin/python -m 
 要用短指令，可啟用該 venv 或將其執行檔目錄加入 PATH。不要對系統 Python 使用 sudo pip
 或繞過 externally-managed-environment 保護。
 
-**只有未來完成授權並正式上傳 PyPI 後**，才可使用 `pipx install groupctl` 或
-在 venv 中 `python -m pip install groupctl`。2026-11-15 PyPI 官方 JSON API 對
-groupctl 回傳 404；名稱未被保留，正式發布前必須再確認，CLI 名稱始終為 groupctl。
+本版沒有上傳 PyPI，請使用上方完整 GitHub wheel URL；不要直接執行 `pipx install groupctl`
+或 `pip install groupctl` 來安裝本版。未來 PyPI 發布需要另外取得維護者明確授權並重新確認名稱。
+CLI 名稱始終為 groupctl。
 
 ### 更新與解除安裝
 
@@ -75,7 +76,7 @@ groupctl 回傳 404；名稱未被保留，正式發布前必須再確認，CLI 
 - 解除安裝保留專案資料、Agent 指令與備份；請先檢查／合併自己的內容，再自行移除不需要的檔案。
 
 Release 同時提供 wheel、sdist、SHA256SUMS 與 RELEASE-PROVENANCE.json。
-Windows 可用 `Get-FileHash .\groupctl-0.3.2-py3-none-any.whl -Algorithm SHA256`，
+Windows 可用 `Get-FileHash .\groupctl-0.3.3-py3-none-any.whl -Algorithm SHA256`，
 Linux 可用 `sha256sum -c SHA256SUMS`（先下載清單列出的所有檔案）。
 SHA256 用於比對下載完整性；精確來源 commit／驗證 run 另見 provenance 與 Actions。
 
@@ -357,7 +358,7 @@ CI 在 Ubuntu／Windows 執行完整 suite、Demo、package 安裝 smoke。
 |---|---|
 | 找不到 Python | 安裝 3.10+，或設定 GROUPCTL_PYTHON；不需安裝 AI API SDK |
 | 找不到 groupctl | pipx ensurepath 後重開終端機；pipx list 檢查，或使用 venv 中的完整執行檔路徑 |
-| PyPI 找不到 groupctl／GitHub wheel 404 | 目前尚未正式發布；審閱者下載 Draft／Actions artifact，不要把同名第三方套件當成本工具 |
+| PyPI 找不到 groupctl／GitHub wheel 404 | 本版使用 GitHub wheel 完整網址；確認 tag 與檔名均為 v0.3.3，並檢查網路。沒有上傳 PyPI，不要安裝同名第三方套件 |
 | externally-managed-environment | 使用 pipx 或 venv，避免 sudo pip 與 --break-system-packages |
 | agent-setup 有 conflicts（exit 2） | 沒有寫入任何檔案；讀 dry-run 內容並手動合併，或明確 --overwrite --confirm 並保留備份 |
 | Agent 沒看到新 Skill | 在 target 專案重新開啟 Agent；確認所選 Agent 目錄，或直接請它讀 AGENT_COLLABORATION.md |
@@ -389,7 +390,7 @@ Exit code：0 成功；1 操作／前置條件錯誤；2 CLI 用法錯誤或驗�
 - groupctl/preview.py／recovery.py／localstate.py：只讀預覽、明確重試與只存在本機的已讀／恢復紀錄。
 - groupctl/onboarding.py／tasks.py：一鍵設定、身分恢復、只讀診斷與根據實際證據的待辦建議。
 - .group/local：可丟棄的本機支援資料；公開事件會封存在推送歷史中。
-- spec/：原始八份作業規格，保留不改。
+- [協定摘要](docs/PROTOCOL_OVERVIEW.md)：自行撰寫的實作說明；原始課程規格不在本版散布範圍。
 - [整合報告](docs/SYNTHESIS_REPORT.md)、[實作差異](docs/IMPLEMENTATION_SUMMARY.md)。
 - evidence/ 下舊紀錄是原版歷史；本次結果在 evidence/synthesis/。
 

@@ -9,7 +9,48 @@ import tarfile
 import zipfile
 from pathlib import Path
 
-from check_version import ROOT, version
+try:
+    from .check_version import ROOT, version
+except ImportError:
+    from check_version import ROOT, version
+
+
+def excluded_material():
+    inventory = json.loads((ROOT / "docs/provenance/source-comparison.json").read_text(encoding="utf-8"))
+    records = [record for reference in inventory["references"] for record in reference["exact_files"]
+               if record["base_path"].startswith("spec/")]
+    return {Path(record["base_path"]).name for record in records}, {record["sha256"] for record in records}
+
+
+def reject_excluded_material(names, read, *, blocked_names=None, blocked_hashes=None):
+    if blocked_names is None or blocked_hashes is None:
+        blocked_names, blocked_hashes = excluded_material()
+    for name in names:
+        assert Path(name).name not in blocked_names, f"Excluded course document: {name}"
+        content = read(name)
+        digests = {hashlib.sha256(content).hexdigest(), hashlib.sha256(content.replace(b"\r\n", b"\n")).hexdigest()}
+        assert not digests & blocked_hashes, f"Excluded course content: {name}"
+
+
+def check_license(metadata, content):
+    assert metadata["License-Expression"] == "MIT", "Expected SPDX MIT metadata"
+    assert "LICENSE" in metadata.get_all("License-File", []), "License file not declared"
+    assert content.decode("utf-8").replace("\r\n", "\n") == (ROOT / "LICENSE").read_text(encoding="utf-8")
+
+
+def check_source_archive(path):
+    def inspect(names, read):
+        reject_excluded_material(names, read)
+        licenses = [name for name in names if Path(name).name == "LICENSE" and len(Path(name).parts) <= 2]
+        assert len(licenses) == 1, "Source archive must have exactly one root LICENSE"
+        assert read(licenses[0]).decode("utf-8").replace("\r\n", "\n") == (ROOT / "LICENSE").read_text(encoding="utf-8")
+    if zipfile.is_zipfile(path):
+        with zipfile.ZipFile(path) as archive:
+            inspect([entry.filename for entry in archive.infolist() if not entry.is_dir()], archive.read)
+    else:
+        with tarfile.open(path) as archive:
+            inspect([entry.name for entry in archive.getmembers() if entry.isfile()], lambda name: archive.extractfile(name).read())
+    print("Source archive licensing/exclusion OK:", path)
 
 
 def check(directory):
@@ -24,6 +65,8 @@ def check(directory):
         assert metadata["Name"] == "groupctl" and metadata["Version"] == version()
         assert metadata["Requires-Python"] == ">=3.10"
         assert metadata["Description-Content-Type"] == "text/markdown"
+        check_license(metadata, archive.read(next(n for n in names if n.endswith(".dist-info/licenses/LICENSE"))))
+        reject_excluded_material([n for n in names if not n.endswith("/")], archive.read)
         entries = archive.read(next(n for n in names if n.endswith(".dist-info/entry_points.txt"))).decode()
         assert "groupctl = groupctl.__main__:main" in entries
         for path in required:
@@ -37,6 +80,11 @@ def check(directory):
     with tarfile.open(sources[0]) as archive:
         names = archive.getnames()
         prefix = f"groupctl-{version()}/"
+        members = [member.name for member in archive.getmembers() if member.isfile()]
+        reject_excluded_material(members, lambda name: archive.extractfile(name).read())
+        assert not any(name.startswith(prefix + "spec/") for name in names), "Course spec directory must not enter sdist"
+        metadata = email.message_from_bytes(archive.extractfile(prefix + "PKG-INFO").read())
+        check_license(metadata, archive.extractfile(prefix + "LICENSE").read())
         for path in ["pyproject.toml", "README.md", "CHANGELOG.md", "scripts/installed_smoke.py",
                      "tests/test_agent_setup.py", "docs/LICENSING_REVIEW.md"] + ["groupctl/agent_data/" + p for p in required]:
             assert prefix + path in names, path
@@ -48,8 +96,11 @@ def main():
     parser.add_argument("--dist", type=Path, default=ROOT / "dist")
     parser.add_argument("--verify", action="store_true")
     parser.add_argument("--tag")
+    parser.add_argument("--source-archive", type=Path, help="Also inspect the Git/GitHub source ZIP")
     args = parser.parse_args()
     archives = check(args.dist)
+    if args.source_archive:
+        check_source_archive(args.source_archive)
     provenance_path = args.dist / "RELEASE-PROVENANCE.json"
     if not args.verify:
         provenance_path.write_text(json.dumps({"version": version(), "tag": args.tag,

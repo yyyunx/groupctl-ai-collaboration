@@ -6,7 +6,7 @@ on:
       tag:
         description: Existing version tag on main to test and build exactly
         required: true
-        default: v0.3.2
+        default: v0.3.3
         type: string
 
 permissions:
@@ -81,4 +81,4 @@ jobs:
           set -euo pipefail
           git fetch origin "refs/tags/$RELEASE_TAG"
           test "$(git rev-parse 'FETCH_HEAD^{commit}')" = "$EXPECTED_SHA"
-          gh release create "$RELEASE_TAG" --verify-tag --draft --title "$RELEASE_TAG — Distribution preparation" --notes-file "docs/releases/$RELEASE_TAG.md" dist/*
+          gh release create "$RELEASE_TAG" --verify-tag --draft --title "groupctl $RELEASE_TAG" --notes-file "docs/releases/$RELEASE_TAG.md" dist/*
