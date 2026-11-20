@@ -1,6 +1,6 @@
 # groupctl：人與 AI 的 Git 協作工具
 
-**Group 3 — yyyunx，protocol 0.1，工具版本 0.3.3。**
+**Protocol 0.1，工具版本 0.3.3。**
 每位學生與自己的 AI 在各自電腦上開發，透過同一個 GitHub repository
 發布、審查、整合與測試，最後形成一份共同成果。這個工具不會啟動三個 AI，
 也不需要 OpenAI／Gemini API。AI 提供判斷，groupctl 執行機械操作並留下證據。
